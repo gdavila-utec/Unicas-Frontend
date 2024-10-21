@@ -7,7 +7,7 @@ import { getAuth } from '@clerk/nextjs/server';
 export async function DELETE(request: NextRequest, { params }: { params: { id: string, slug: string } }) {
   try {
     const { getToken } = getAuth(request);
-    const token = await getToken({ template: 'test' });
+    const token = await getToken();
     console.log('Junta id:', params.id);
     console.log('Multa slug:', params.slug);
 
@@ -33,7 +33,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { getToken } = getAuth(request);
-    const token = await getToken({ template: 'test' });
+    const token = await getToken();
     const data = await request.json();
 
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/multas/${params.id}`, {

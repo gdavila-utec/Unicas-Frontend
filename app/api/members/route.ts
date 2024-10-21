@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
     try {
         const { getToken } = getAuth(request)
-        const token = await getToken({ template: 'test' })
+        const token = await getToken()
         const data = await request.json();
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/junta-users/${data.id}/`, {
             headers: {
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const { getToken } = getAuth(request)
-        const token = await getToken({ template: 'test' })
+        const token = await getToken()
         const requestBody = await request.json()
         const parserBody = JSON.stringify(
             {
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     const { getToken } = getAuth(request)
-    const token = await getToken({ template: 'test' })
+    const token = await getToken()
     const requestBody = await request.json()
     console.log(requestBody)
     if (requestBody.id) {

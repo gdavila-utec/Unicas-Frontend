@@ -5,7 +5,7 @@ import { getAuth } from '@clerk/nextjs/server';
 
   export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const { getToken } = getAuth(request);
-  const token = await getToken({ template: 'test' });
+  const token = await getToken();
 
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/agenda/junta/${params.id}`, {
     headers: {
@@ -23,7 +23,7 @@ import { getAuth } from '@clerk/nextjs/server';
 export async function POST(request: NextRequest) {
   try {
     const { getToken } = getAuth(request);
-    const token = await getToken({ template: 'test' });
+    const token = await getToken();
     const data = await request.json();
     
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/agenda/`, {
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { getToken } = getAuth(request);
-    const token = await getToken({ template: 'test' });
+    const token = await getToken();
     const data = await request.json();
     const { id, content } = data; // Assuming id is sent in the request body
     console.log(params.id);
@@ -84,7 +84,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 export async function DELETE(request: NextRequest) {
   try {
     const { getToken } = getAuth(request);
-    const token = await getToken({ template: 'test' });
+    const token = await getToken();
     const { id } = await request.json(); // Assuming id is sent in the request body
 
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/agenda/${id}/`, {

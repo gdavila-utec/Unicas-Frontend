@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const { getToken } = getAuth(request);
-    const token = await getToken({ template: 'test' });
+    const token = await getToken();
     const data = await request.json();
 
     console.log('data')
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
   export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { getToken } = getAuth(request);
-    const token = await getToken({ template: 'test' });
+    const token = await getToken();
 
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/pagosprestamos/junta/${params.id}`, {
       headers: {

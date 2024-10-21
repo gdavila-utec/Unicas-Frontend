@@ -3,7 +3,7 @@ import { getAuth } from '@clerk/nextjs/server'
 export async function GET(request: NextRequest, {params} : {params : {id : string}}) {
     try {
         const { getToken } = getAuth(request)
-        const token = await getToken({ template: 'test' })
+        const token = await getToken()
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/prestamos/junta/${params.id}/`, {
             headers: {
                 'Authorization': `Bearer ${token}`,

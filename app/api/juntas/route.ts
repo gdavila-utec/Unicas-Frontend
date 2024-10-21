@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   const { getToken } = getAuth(request)
-  const token = await getToken({ template: 'test' })
+  const token = await getToken()
 
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/juntas/`, {
     headers: {
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const { getToken } = getAuth(request)
-  const token = await getToken({ template: 'test' })
+  const token = await getToken()
   const requestBody = await request.json()
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/juntas/`, {
     method: 'POST',
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   const { getToken } = getAuth(request)
-  const token = await getToken({ template: 'test' })
+  const token = await getToken()
   const requestBody = await request.json()
   console.log(requestBody)
   if (requestBody.id) {

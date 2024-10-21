@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
     const { getToken } = getAuth(request);
-    const token = await getToken({ template: 'test' });
+    const token = await getToken();
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/capital/ingreso/`, {
         headers: {
             'Content-Type': 'application/json',
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     // try {
         const { getToken } = getAuth(request);
-        const token = await getToken({ template: 'test' });
+        const token = await getToken();
         const body = await request.json(); 
         console.log(body);
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/capital/ingreso/`, {

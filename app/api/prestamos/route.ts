@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   // Fetch loan payments from an external API instead of using the local array
   const { getToken } = getAuth(request)
-  const token = await getToken({ template: 'test' })
+  const token = await getToken()
 
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/prestamos/`, {
     headers: {
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   // try {
     const { getToken } = getAuth(request)
-    const token = await getToken({ template: 'test' })
+    const token = await getToken()
     const data = await request.json();
     const jsonBody = JSON.stringify(data)
     console.log(jsonBody)
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { getToken } = getAuth(request)
-    const token = await getToken({ template: 'test' })
+    const token = await getToken()
     const { id } = await request.json(); // Expecting an ID in the request body
 
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/prestamos/${id}/`, {

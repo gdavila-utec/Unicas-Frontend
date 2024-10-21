@@ -8,6 +8,7 @@ import { JuntaCard } from "@/components/JuntaCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useAuth } from '@clerk/clerk-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,15 +27,15 @@ const Home: React.FC = () => {
   const [deleteJuntaId, setDeleteJuntaId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'member' | 'admin' | null>(null);
   const router = useRouter();
-
+  const { isSignedIn } = useAuth();
   useEffect(() => {
-    // if (activeView === 'admin') {
+    if (activeView === 'admin') {
       handleGetJuntas();
-    // }
-  // }, [activeView]);
-  }, []);
-
+    }
+  }, [activeView]);
+  
   const handleGetJuntas = async () => {
+    if (!isSignedIn) return;
     setLoading(true);
     try {
       const response = await fetch('/api/juntas');
@@ -69,7 +70,7 @@ const Home: React.FC = () => {
       <div className="bg-gray-100 min-h-screen p-6">
         <div className="container mx-auto">
           <h1 className="text-4xl font-bold mb-8 text-center text-gray-800">Gestión de UNICAS</h1>
-          <AddJuntaComponent onJuntaAdded={handleGetJuntas} />
+         <AddJuntaComponent onJuntaAdded={()=>handleGetJuntas()} />
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -107,7 +108,7 @@ const Home: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* <div className="flex justify-between w-full gap-4">
+            <div className="flex justify-between w-full gap-4">
               <Button
                 onClick={() => setActiveView(activeView === 'member' ? null : 'member')}
                 className={`flex-1 ${activeView === 'member' ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"} hover:opacity-90 transition-all duration-300`}
@@ -120,9 +121,9 @@ const Home: React.FC = () => {
               >
                 Vista Admin
               </Button>
-            </div> */}
+            </div>
 
-            {/* {activeView === 'member' && (
+            {activeView === 'member' && (
               <div className="animate-in fade-in duration-300 space-y-4">
                 <SignedOut>
                   <Input
@@ -141,9 +142,9 @@ const Home: React.FC = () => {
                   </SignOutButton>
                 </SignedIn>
               </div>
-            )} */}
+            )}
 
-            {/* {activeView === 'admin' && (
+            {activeView === 'admin' && (
               <div className="animate-in fade-in duration-300 space-y-4">
                 <SignedOut>
                   <SignInButton mode="modal">
@@ -161,30 +162,14 @@ const Home: React.FC = () => {
                   </div>
                 </SignedIn>
               </div>
-            )} */}
-            <div className="animate-in fade-in duration-300 space-y-4">
-              <SignedOut>
-                <SignInButton mode="modal">
-                  <Button className="w-full">Iniciar sesión </Button>
-                </SignInButton>
-              </SignedOut>
-              <SignedIn>
-                <div className="flex items-center justify-between">
-                  <UserButton afterSignOutUrl="/" />
-                  <SignOutButton>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <LogOut className="w-4 h-4" /> Cerrar sesión
-                    </Button>
-                  </SignOutButton>
-                </div>
-              </SignedIn>
-            </div>
+            )}
+           
 
           </CardContent>
         </Card>
 
-        {/* {activeView === 'admin' && <AdminView />} */}
-        <AdminView />
+        {activeView === 'admin' && <AdminView />}
+
       </div>
 
       <AlertDialog open={!!deleteJuntaId} onOpenChange={(open) => !open && setDeleteJuntaId(null)}>

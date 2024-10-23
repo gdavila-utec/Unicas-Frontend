@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
@@ -8,7 +9,18 @@ import { JuntaCard } from "@/components/JuntaCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useAuth } from '@clerk/clerk-react';
+import { useAuth, useUser } from '@clerk/clerk-react';
+// import EmailLogin from '@/components/login';
+
+
+function SignInPage() {
+  return (
+    <div className="flex h-screen justify-center items-center align-middle">
+      <SignIn path="/sign-in" />
+    </div>
+  );
+}
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,11 +37,25 @@ const Home: React.FC = () => {
   const [juntas, setJuntas] = useState<Junta[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [deleteJuntaId, setDeleteJuntaId] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<'member' | 'admin' | null>(null);
+  const [activeView, setActiveView] = useState<'member' | 'admin' | 'facilitador' | null>(null);
   const router = useRouter();
+
   const { isSignedIn } = useAuth();
+  const { user,  isLoaded } = useUser();
+  console.log('user: ', user?.publicMetadata.role);
+
   useEffect(() => {
-    if (activeView === 'admin') {
+    if (user?.publicMetadata.role === 'facilitador') {
+      setActiveView('facilitador');
+    } else if (user?.publicMetadata.role === 'admin') {
+      setActiveView('admin');
+    } else {
+      setActiveView('member');
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (activeView === 'admin' || activeView === 'facilitador') {
       handleGetJuntas();
     }
   }, [activeView]);
@@ -108,7 +134,7 @@ const Home: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex justify-between w-full gap-4">
+            {/* <div className="flex justify-between w-full gap-4">
               <Button
                 onClick={() => setActiveView(activeView === 'member' ? null : 'member')}
                 className={`flex-1 ${activeView === 'member' ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"} hover:opacity-90 transition-all duration-300`}
@@ -121,8 +147,9 @@ const Home: React.FC = () => {
               >
                 Vista Admin
               </Button>
-            </div>
-
+            </div> */}
+            {/* <EmailLogin /> */}
+ 
             {activeView === 'member' && (
               <div className="animate-in fade-in duration-300 space-y-4">
                 <SignedOut>

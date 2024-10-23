@@ -24,21 +24,23 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         const token = await getToken();
         const requestBody = await request.json();
 
-        // Create the user
+        // Create the user with explicit typing
         const userData = {
-            is_superuser: requestBody.is_superuser,
-            document_type: requestBody.document_type,
+            is_superuser: Boolean(requestBody.is_superuser),
+            document_type: String(requestBody.document_type),
             full_name: `${requestBody.first_name} ${requestBody.last_name}`,
-            first_name: requestBody.first_name,
-            last_name: requestBody.last_name,
-            document_number: requestBody.document_number,
-            birth_date: requestBody.birth_date,
-            province: requestBody.province,
-            district: requestBody.district,
-            address: requestBody.address,
-            username: requestBody.document_number,
+            first_name: String(requestBody.first_name),
+            last_name: String(requestBody.last_name),
+            document_number: String(requestBody.document_number),
+            birth_date: requestBody.birth_date ? new Date(requestBody.birth_date).toISOString().split('T')[0] : null,
+            province: String(requestBody.province || ''),
+            district: String(requestBody.district || ''),
+            address: String(requestBody.address || ''),
+            username: String(requestBody.document_number),
+            email: `${requestBody.document_number}@example.com`, // Add default email if required
         };
 
+        // First API call to create user
         const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/`, {
             method: 'POST',
             headers: {
@@ -50,12 +52,21 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
         if (!userResponse.ok) {
             const errorData = await userResponse.json();
-            return NextResponse.json(errorData.detail, { status: userResponse.status });
+            return NextResponse.json({ error: errorData.detail || 'Failed to create user' }, 
+                { status: userResponse.status });
         }
 
         const newUser = await userResponse.json();
 
-        // Add the user to the junta
+        // Ensure newUser has an id before proceeding
+        if (!newUser.id) {
+            return NextResponse.json(
+                { error: 'Invalid user response - missing ID' }, 
+                { status: 500 }
+            );
+        }
+
+        // Second API call to add user to junta
         const juntaResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/juntas/add`, {
             method: 'POST',
             headers: {
@@ -63,19 +74,48 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                junta_id: params.id,
-                user_id: newUser.id,
+                junta_id: Number(params.id),
+                user_id: Number(newUser.id),
             }),
         });
 
         if (!juntaResponse.ok) {
-            return NextResponse.json({ error: 'Failed to add user to junta' }, { status: juntaResponse.status });
+            // Try to get error details from response
+            let errorMessage;
+            try {
+                const errorData = await juntaResponse.json();
+                errorMessage = errorData.detail || 'Failed to add user to junta';
+            } catch {
+                errorMessage = 'Failed to add user to junta';
+            }
+            
+            return NextResponse.json(
+                { error: errorMessage }, 
+                { status: juntaResponse.status }
+            );
         }
 
-        return NextResponse.json(newUser);
+        // Ensure we're returning a serializable object
+        const responseData = {
+            id: newUser.id,
+            username: newUser.username,
+            full_name: newUser.full_name,
+            document_type: newUser.document_type,
+            document_number: newUser.document_number,
+            birth_date: newUser.birth_date,
+            province: newUser.province,
+            district: newUser.district,
+            address: newUser.address,
+        };
+
+        return NextResponse.json(responseData);
+
     } catch (error) {
         console.error('Error creating user:', error);
-        return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Internal server error' }, 
+            { status: 500 }
+        );
     }
 }
 

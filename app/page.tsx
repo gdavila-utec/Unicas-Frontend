@@ -16,7 +16,7 @@ import { useAuth, useUser } from '@clerk/clerk-react';
 function SignInPage() {
   return (
     <div className="flex h-screen justify-center items-center align-middle">
-      <SignIn path="/sign-in" />
+      <SignedIn  />
     </div>
   );
 }

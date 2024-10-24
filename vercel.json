@@ -1,34 +1,11 @@
 {
     "version": 2,
-    "buildCommand": "next build",
+    "buildCommand": "npm run build",
     "outputDirectory": ".next",
-    "framework": "nextjs",
-    "rewrites": [{
-        "source": "/(.*)",
-        "destination": "/$1"
-    }],
-    "headers": [{
-        "source": "/(.*)",
-        "headers": [{
-                "key": "X-Content-Type-Options",
-                "value": "nosniff"
-            },
-            {
-                "key": "X-Frame-Options",
-                "value": "DENY"
-            },
-            {
-                "key": "X-XSS-Protection",
-                "value": "1; mode=block"
-            }
-        ]
-    }],
+    "regions": ["fra1"],
     "env": {
-        "NEXT_PUBLIC_API_URL": "@api_url"
-    },
-    "regions": ["cdg1", "sfo1", "hnd1"],
-    "github": {
-        "silent": true,
-        "autoAlias": true
+        "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "@next_public_clerk_publishable_key",
+        "CLERK_SECRET_KEY": "@clerk_secret_key",
+        "NEXT_PUBLIC_API_URL": "@next_public_api_url"
     }
 }

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
-import { clerkClient } from '@clerk/nextjs';
-import { auth } from '@clerk/nextjs';
+import { clerkClient } from '@clerk/clerk-sdk-node';
+import { getAuth } from '@clerk/nextjs/server';
 
-export async function GET() {
+import { NextRequest } from 'next/server';
+
+export async function GET(request: NextRequest) {
   try {
-    const { userId } = auth();
+    const { userId } = getAuth(request);
 
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
@@ -20,7 +22,7 @@ export async function GET() {
     const users = await clerkClient.users.getUserList();
 
     // Format the user data
-    const formattedUsers = users.map((user) => ({
+    const formattedUsers = users.data.map((user: any) => ({
       id: user.id,
       user: `${user.firstName} ${user.lastName}`,
       phone: user.phoneNumbers[0]?.phoneNumber || 'N/A',

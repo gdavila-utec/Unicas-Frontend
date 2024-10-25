@@ -25,6 +25,17 @@
     snakecase-keys "5.4.4"
     tslib "2.4.1"
 
+"@clerk/backend@1.15.1":
+  version "1.15.1"
+  resolved "https://registry.yarnpkg.com/@clerk/backend/-/backend-1.15.1.tgz#442aba3674fb9d8cd1cb3896f1da7d69a3ea4dad"
+  integrity sha512-yoBCji0bJFn2bUxBOO0+6XmlN6Tb5M2CiW+DAX7V3pFQ7g7DnHjSZ/LVkt9yB0AmqHKPv1ISXWM/NFYSDBRVuA==
+  dependencies:
+    "@clerk/shared" "2.10.1"
+    "@clerk/types" "4.28.0"
+    cookie "0.7.0"
+    snakecase-keys "5.4.4"
+    tslib "2.4.1"
+
 "@clerk/clerk-react@5.8.2":
   version "5.8.2"
   resolved "https://registry.yarnpkg.com/@clerk/clerk-react/-/clerk-react-5.8.2.tgz#0c113f013e73723b145f7a4bd479e29997df0342"
@@ -32,6 +43,16 @@
   dependencies:
     "@clerk/shared" "2.7.2"
     "@clerk/types" "4.20.1"
+    tslib "2.4.1"
+
+"@clerk/clerk-sdk-node@^5.0.54":
+  version "5.0.54"
+  resolved "https://registry.yarnpkg.com/@clerk/clerk-sdk-node/-/clerk-sdk-node-5.0.54.tgz#d962ebf4e668b7b9a0b9417763d0248928e3ee3a"
+  integrity sha512-Bz+3FWaCO3TpPlkM/ZCXSbooOpEO5gXC6ELSaiFFmb+uPm8sTmKVIC+ayJZ6PpGWiw96VtxJSiHMznVFOV8+7Q==
+  dependencies:
+    "@clerk/backend" "1.15.1"
+    "@clerk/shared" "2.10.1"
+    "@clerk/types" "4.28.0"
     tslib "2.4.1"
 
 "@clerk/localizations@^3.0.4":
@@ -53,6 +74,17 @@
     crypto-js "4.2.0"
     server-only "0.0.1"
     tslib "2.4.1"
+
+"@clerk/shared@2.10.1":
+  version "2.10.1"
+  resolved "https://registry.yarnpkg.com/@clerk/shared/-/shared-2.10.1.tgz#e4a6819fee92d1575ff53737058ad083b94d51fe"
+  integrity sha512-9dPuCcTd2qaK+YU9BiO5mPPnet9B38ZSp0gutnaUQmve9013qO0p9Lx7ympiPSulwkTG4NAfYxjr/pyIUUFqCQ==
+  dependencies:
+    "@clerk/types" "4.28.0"
+    glob-to-regexp "0.4.1"
+    js-cookie "3.0.5"
+    std-env "^3.7.0"
+    swr "^2.2.0"
 
 "@clerk/shared@2.7.2":
   version "2.7.2"
@@ -76,6 +108,13 @@
   version "4.21.0"
   resolved "https://registry.yarnpkg.com/@clerk/types/-/types-4.21.0.tgz#0ef79321d72983ef6e8c4a945617fe1f7d657c92"
   integrity sha512-yyPNF4agzub9zXOht9Bk8HG+OkHfLKIpsQuTCiZJszehcKNUqKvJZRxUwdRREBYnBdMl632PKCwbckZsChVxVQ==
+  dependencies:
+    csstype "3.1.1"
+
+"@clerk/types@4.28.0":
+  version "4.28.0"
+  resolved "https://registry.yarnpkg.com/@clerk/types/-/types-4.28.0.tgz#132228e4e1c1b626a36869a14a352e48d08eb8ef"
+  integrity sha512-RPdrUs8HYfhXaZ0MOVBkzy7lilsU9lDVSC88a5o/cEMmTML+BTDfLHMlLG81kgvagSLCKKbl28iocb8y7stm1Q==
   dependencies:
     csstype "3.1.1"
 
@@ -1572,6 +1611,11 @@ cookie@0.5.0:
   version "0.5.0"
   resolved "https://registry.yarnpkg.com/cookie/-/cookie-0.5.0.tgz#d1f5d71adec6558c58f389987c366aa47e994f8b"
   integrity sha512-YZ3GUyn/o8gfKJlnlX7g7xq4gyO6OSuhGPKaaGssGB2qgDUS0gPgtTvoyZLTt9Ab6dC4hfc9dV5arkvc/OCmrw==
+
+cookie@0.7.0:
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/cookie/-/cookie-0.7.0.tgz#2148f68a77245d5c2c0005d264bc3e08cfa0655d"
+  integrity sha512-qCf+V4dtlNhSRXGAZatc1TasyFO6GjohcOul807YOb5ik3+kQSnb4d7iajeCL8QHaJ4uZEjCgiCJerKXwdRVlQ==
 
 cross-spawn@^7.0.0, cross-spawn@^7.0.2:
   version "7.0.3"

@@ -3,19 +3,20 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
-# Install dependencies
-COPY package.json package-lock.json ./
-RUN npm install
+# Copy package.json and yarn.lock
+COPY package.json yarn.lock ./
+
+# Install dependencies using yarn
+RUN yarn install --frozen-lockfile
 
 # Copy the rest of the app
 COPY . .
 
 # Build the app
-RUN npm run build
+RUN yarn build
 
 # Expose port
 EXPOSE 3000
 
 # Start the app
-CMD ["npm", "run", "dev"]
-
+CMD ["yarn", "start"]

@@ -1,12 +1,20 @@
-import React from 'react'
-import { JuntaCard } from './JuntaCard'
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
-function AdminSection() {
+export default function AdminSection() {
   return (
-    <div>
-
+    <div className='flex flex-col space-y-4'>
+      <h2 className='text-2xl font-bold'>Admin Section</h2>
+      <div className='flex flex-col space-y-2'>
+        <Link href='/admin'>
+          <Button
+            variant='outline'
+            className='w-full'
+          >
+            User Management
+          </Button>
+        </Link>
+      </div>
     </div>
-  )
+  );
 }
-
-export default AdminSection

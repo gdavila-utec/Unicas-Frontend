@@ -1,148 +1,67 @@
-import { getAuth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 
 export async function GET(request: NextRequest) {
   try {
-    const { getToken } = getAuth(request);
-    const token = await getToken();
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split('Bearer ')[1];
+    const { searchParams } = new URL(request.url);
+    const juntaId = searchParams.get('juntaId');
 
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const data = await request.json();
-    if (!data.id) {
-      return NextResponse.json({ error: 'Missing junta ID' }, { status: 400 });
-    }
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}}/api/junta-users/${data.id}/`,
+      `${process.env.NEXT_PUBLIC_API_URL}/members/junta/${juntaId}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
         },
-        cache: 'no-store',
       }
     );
 
     if (!response.ok) {
-      return NextResponse.json(
-        { error: 'Failed to fetch members' },
-        { status: response.status }
-      );
-    }
-
-    const users = await response.json();
-    return NextResponse.json(users);
-  } catch (error) {
-    console.error('Error fetching members:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch members' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const { getToken } = getAuth(request);
-    const token = await getToken();
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const requestBody = await request.json();
-
-    // Create the user with explicit typing
-    const userData = {
-      is_superuser: Boolean(requestBody.is_superuser),
-      document_type: String(requestBody.document_type),
-      full_name: `${requestBody.first_name} ${requestBody.last_name}`,
-      first_name: String(requestBody.first_name),
-      last_name: String(requestBody.last_name),
-      document_number: String(requestBody.document_number),
-      birth_date: requestBody.birth_date
-        ? new Date(requestBody.birth_date).toISOString().split('T')[0]
-        : null,
-      province: String(requestBody.province || ''),
-      district: String(requestBody.district || ''),
-      address: String(requestBody.address || ''),
-      username: String(requestBody.document_number),
-      email: `${requestBody.document_number}@example.com`, // Add default email if required
-    };
-
-    console.log('Creating user with data:', userData);
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/users/`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      return NextResponse.json(
-        { error: errorData.detail || 'Failed to create user' },
-        { status: response.status }
-      );
+      throw new Error('Failed to fetch members');
     }
 
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error creating user:', error);
-    return NextResponse.json(
-      { error: 'Failed to create user' },
-      { status: 500 }
-    );
+    console.error('Error fetching members:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { getToken } = getAuth(request);
-    const token = await getToken();
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split('Bearer ')[1];
 
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const requestBody = await request.json();
-    if (!requestBody.id) {
-      return NextResponse.json({ error: 'Missing user ID' }, { status: 400 });
-    }
+    const { juntaId, memberId } = await request.json();
 
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/users/${requestBody.id}/`,
+      `${process.env.NEXT_PUBLIC_API_URL}/members/${juntaId}/add/${memberId}`,
       {
-        method: 'DELETE',
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
         },
       }
     );
 
     if (!response.ok) {
-      return NextResponse.json(
-        { error: 'Failed to delete user' },
-        { status: response.status }
-      );
+      throw new Error('Failed to add member to junta');
     }
 
-    return NextResponse.json({ message: 'User deleted successfully' });
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error deleting user:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Error adding member to junta:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

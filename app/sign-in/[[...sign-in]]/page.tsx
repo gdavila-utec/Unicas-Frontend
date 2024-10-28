@@ -1,59 +1,273 @@
-import { SignIn } from "@clerk/nextjs";
-import Link from "next/link";
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import useAuthStore from '../../../store/useAuthStore';
+import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '../../../components/ui/card';
+import { Loader2 } from 'lucide-react';
+import Cookies from 'js-cookie';
+
+type LoginMethod = 'email' | 'phone';
+
+interface FormData {
+  email?: string;
+  phone_number?: string;
+  password: string;
+}
+
+interface LoginResponse {
+  access_token: string;
+  user: {
+    id: string;
+    role: string;
+    username?: string;
+    email?: string;
+    phone_number?: string;
+  };
+}
 
 export default function SignInPage() {
-  console.log(' process.env.NODE_ENV: ', process.env.NODE_ENV);
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-white px-4 py-12">
-      <SignIn
-        appearance={{
-          elements: {
-            formButtonPrimary: 
-              "bg-black-700 hover:bg-black-700 text-white px-3 py-2 rounded-md relative",
-            formButtonIcon: "hidden",
-            cardSimple: "shadow-xl rounded-3xl",
-            headerTitle: {
-              className: "text-2xl font-semibold text-center",
-              children: "Entrar"
-            },
-            headerSubtitle: {
-              className: "text-center text-gray-600 text-sm",
-              children: "para continuar a my app"
-            },
-            socialButtonsProviderIcon: "hidden",
-            dividerRow: "hidden",
-            socialButtonsBlockButton: "hidden",
-            formFieldInput: "rounded-md border-gray-200",
-            formFieldLabel: {
-              email: {
-                children: "Correo electrónico"
-              },
-              password: {
-                children: "Contraseña"
-              }
-            },
-            footerActionText: "hidden",
-            footerActionLink: "hidden",
-            logoBox: "hidden",
-            footer: "hidden",
-            footerPages: "hidden",
-            card: "relative",
-            formButtonPrimaryContent: {
-              children: "Continuar"
-            }
+  const router = useRouter();
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const [loginMethod, setLoginMethod] = useState<LoginMethod>('phone');
+  const [formData, setFormData] = useState<FormData>({
+    email: '',
+    phone_number: '',
+    password: '',
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    // Create an AbortController for timeout management
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+    try {
+      if (!process.env.NEXT_PUBLIC_API_URL) {
+        throw new Error('API URL not configured');
+      }
+
+      // Format phone number if needed
+      const formattedData = {
+        ...formData,
+        phone_number:
+          loginMethod === 'phone' && formData.phone_number
+            ? formData.phone_number.startsWith('+51')
+              ? formData.phone_number
+              : `+51${formData.phone_number}`
+            : formData.phone_number,
+      };
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          layout: {
-            showOptionalFields: false,
-            socialButtonsPlacement: undefined
-          }
-        }}
-      />
-      <div className="mt-4 text-sm text-gray-600">
-        ¿No tienes una cuenta?{" "}
-        <Link href="/sign-up" className="text-blue-600 hover:text-blue-700">
-          Regístrate
-        </Link>
-      </div>
+          body: JSON.stringify({
+            ...(loginMethod === 'email'
+              ? { email: formData.email }
+              : { phone_number: formattedData.phone_number }),
+            password: formData.password,
+          }),
+          signal: controller.signal,
+          credentials: 'include', // Important for cookies
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error en el inicio de sesión');
+      }
+
+      const data: LoginResponse = await response.json();
+
+      // Store token in cookie
+      Cookies.set('token', data.access_token, {
+        expires: 1, // 1 day
+        path: '/',
+        sameSite: 'strict',
+        secure: process.env.NODE_ENV === 'production',
+      });
+
+      // Store auth data in state
+      setAuth({
+        token: data.access_token,
+        role: data.user.role,
+        user: {
+          id: data.user.id,
+          name: data.user.username,
+          email: data.user.email,
+          phone: data.user.phone_number,
+        },
+      });
+
+      // Force a router refresh to update middleware state
+      router.refresh();
+
+      // Redirect based on role
+      switch (data.user.role.toLowerCase()) {
+        case 'admin':
+        case 'facilitador':
+          router.push('/');
+          break;
+        case 'member':
+          router.push('/');
+          break;
+        default:
+          router.push('/');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          setError(
+            'La solicitud ha tardado demasiado. Por favor, inténtalo de nuevo.'
+          );
+        } else {
+          setError(error.message);
+        }
+      } else {
+        setError('Error en el inicio de sesión');
+      }
+    } finally {
+      clearTimeout(timeoutId);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className='flex min-h-screen items-center justify-center bg-gray-50'>
+      <Card className='w-full max-w-md'>
+        <CardHeader className='space-y-1'>
+          <CardTitle className='text-2xl text-center font-bold'>
+            Iniciar Sesión
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          <div className='flex justify-center space-x-4 mb-6'>
+            <Button
+              type='button'
+              variant={loginMethod === 'email' ? 'default' : 'outline'}
+              onClick={() => setLoginMethod('email')}
+              disabled={loading}
+            >
+              Email
+            </Button>
+            <Button
+              type='button'
+              variant={loginMethod === 'phone' ? 'default' : 'outline'}
+              onClick={() => setLoginMethod('phone')}
+              disabled={loading}
+            >
+              Teléfono
+            </Button>
+          </div>
+
+          <form
+            className='space-y-4'
+            onSubmit={handleSubmit}
+          >
+            {error && (
+              <div className='p-3 text-sm text-red-500 bg-red-50 rounded-md'>
+                {error}
+              </div>
+            )}
+
+            {loginMethod === 'email' ? (
+              <div className='space-y-2'>
+                <Input
+                  id='email'
+                  type='email'
+                  placeholder='Email'
+                  required
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  disabled={loading}
+                />
+              </div>
+            ) : (
+              <div className='space-y-2'>
+                <Input
+                  id='phone_number'
+                  type='tel'
+                  placeholder='Teléfono (ej: 999999999)'
+                  required
+                  value={formData.phone_number}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      phone_number: e.target.value.replace(/\D/g, ''),
+                    })
+                  }
+                  disabled={loading}
+                />
+                <p className='text-sm text-gray-500'>
+                  Ingresa solo números, se agregará el prefijo +51
+                  automáticamente
+                </p>
+              </div>
+            )}
+
+            <div className='space-y-2'>
+              <Input
+                id='password'
+                type='password'
+                placeholder='Contraseña'
+                required
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+                disabled={loading}
+              />
+            </div>
+
+            <Button
+              type='submit'
+              className='w-full'
+              disabled={loading}
+            >
+              {loading ? (
+                <div className='flex items-center justify-center'>
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  <span>Iniciando sesión...</span>
+                </div>
+              ) : (
+                'Iniciar Sesión'
+              )}
+            </Button>
+          </form>
+
+          <div className='mt-4 text-center text-sm'>
+            <Link
+              href='/sign-up'
+              className='text-blue-600 hover:text-blue-500'
+            >
+              ¿No tienes cuenta? Regístrate
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

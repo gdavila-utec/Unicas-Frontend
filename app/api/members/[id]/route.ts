@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from '@clerk/nextjs/server';
+import { headers } from 'next/headers';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { getToken } = getAuth(request);
-    const token = await getToken();
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split('Bearer ')[1];
 
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -44,8 +44,8 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { getToken } = getAuth(request);
-    const token = await getToken();
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split('Bearer ')[1];
 
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -153,8 +153,8 @@ export async function POST(
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { getToken } = getAuth(request);
-    const token = await getToken();
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split('Bearer ')[1];
 
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

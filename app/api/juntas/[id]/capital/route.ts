@@ -1,20 +1,76 @@
-import { getAuth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const { getToken } = getAuth(request);
-  const token = await getToken();
-  console.log('Params id', params.id)
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/capital/social/junta/${params.id}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-  });
-  const capitalSocial = await response.json(); // Get multas from the response
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split('Bearer ')[1];
+
+    if (!token) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/capital/social/junta/${params.id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch capital social');
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error fetching capital social:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
   }
-  ;
-  return NextResponse.json(capitalSocial);
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split('Bearer ')[1];
+
+    if (!token) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    const body = await request.json();
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/capital/social`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...body,
+          juntaId: params.id,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to create capital social');
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error creating capital social:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
 }

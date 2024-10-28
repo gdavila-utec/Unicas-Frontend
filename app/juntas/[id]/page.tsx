@@ -12,8 +12,9 @@ import {
   CreditCard,
   Briefcase,
   Calendar,
+  ChevronsLeftRight,
 } from 'lucide-react';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -24,26 +25,26 @@ import PrestamosSection from '@/components/PrestamosSection';
 import MultaSection from '@/components/MultasSection';
 import AcccionesSection from '@/components/AccionesSection';
 import PagosSection from '@/components/PagosSection';
-import CapitalSocialSection from '@/components/CapitalSocialSection';
+// import CapitalSocialSection from '@/components/CapitalSocialSection';
 import AgendaSection from '@/components/AgendaSection';
+import { Ajustes } from '@/components/Ajustes';
 
 const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
   const [isClient, setIsClient] = useState(false);
   const [junta, setJunta] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { isAuthenticated, isAdmin, token } = useAuth();
   const router = useRouter();
 
   const handleGetJunta = async () => {
-    if (!isLoaded || !isSignedIn) {
+    if (!isAdmin || !isAuthenticated) {
       return;
     }
 
     setIsLoading(true);
     try {
-      const token = await getToken();
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/juntas/${params.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/juntas/${params.id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -76,17 +77,17 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
   }, []);
 
   useEffect(() => {
-    if (isLoaded && !isSignedIn) {
+    if (!isAuthenticated) {
       router.push('/sign-in');
       return;
     }
 
-    if (isLoaded && isSignedIn) {
+    if (isAuthenticated) {
       handleGetJunta();
     }
-  }, [isLoaded, isSignedIn, params.id]);
+  }, [isAuthenticated, params.id]);
 
-  if (!isClient || !isLoaded || !isSignedIn) return null;
+  if (!isAuthenticated) return null;
 
   const tabItems = [
     { value: 'resumen', label: 'Resumen', icon: Home },
@@ -95,8 +96,9 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
     { value: 'multas', label: 'Multas', icon: AlertTriangle },
     { value: 'acciones', label: 'Acciones', icon: TrendingUp },
     { value: 'pagos', label: 'Pagos', icon: CreditCard },
-    { value: 'capital', label: 'Capital Social', icon: Briefcase },
+
     { value: 'agenda', label: 'Agenda', icon: Calendar },
+    { value: 'config', label: 'Configuración', icon: ChevronsLeftRight },
   ];
 
   return (
@@ -163,11 +165,14 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
                 <TabsContent value='pagos'>
                   <PagosSection juntaId={params.id} />
                 </TabsContent>
-                <TabsContent value='capital'>
+                {/* <TabsContent value='capital'>
                   <CapitalSocialSection juntaId={params.id} />
-                </TabsContent>
+                </TabsContent> */}
                 <TabsContent value='agenda'>
                   <AgendaSection juntaId={params.id} />
+                </TabsContent>
+                <TabsContent value='config'>
+                  <Ajustes />
                 </TabsContent>
               </CardContent>
             </Card>

@@ -1,39 +1,46 @@
 import { NextResponse } from 'next/server';
-import { clerkClient } from '@clerk/clerk-sdk-node';
-import { getAuth } from '@clerk/nextjs/server';
+import { headers } from 'next/headers';
 
-import { NextRequest } from 'next/server';
+// Mark route as dynamic since it uses headers
+export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { userId } = getAuth(request);
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split('Bearer ')[1];
 
-    if (!userId) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get the current user to check if they're an admin
-    const currentUser = await clerkClient.users.getUser(userId);
-    if (currentUser.publicMetadata.role !== 'admin') {
-      return new NextResponse('Forbidden', { status: 403 });
+    // Add error handling for the API URL
+    if (!process.env.NEXT_PUBLIC_API_URL) {
+      throw new Error('API URL is not configured');
     }
 
-    // Fetch all users
-    const users = await clerkClient.users.getUserList();
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-    // Format the user data
-    const formattedUsers = users.data.map((user: any) => ({
-      id: user.id,
-      user: `${user.firstName} ${user.lastName}`,
-      phone: user.phoneNumbers[0]?.phoneNumber || 'N/A',
-      username: user.username || user.id,
-      email: user.emailAddresses[0]?.emailAddress || 'N/A',
-      createdAt: user.createdAt,
-    }));
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: errorData,
+      });
+      throw new Error(`API responded with status ${response.status}`);
+    }
 
-    return NextResponse.json(formattedUsers);
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
     console.error('Error fetching users:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: error || 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }

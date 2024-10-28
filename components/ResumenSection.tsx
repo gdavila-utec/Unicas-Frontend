@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/table';
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
 interface Member {
@@ -60,28 +60,30 @@ const ResumenSection = ({ juntaId }: { juntaId: string }) => {
   const [acciones, setAcciones] = useState<Accion[]>([]);
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [capital, setCapital] = useState<Capital | null>(null);
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { isAuthenticated, isAdmin, token } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!isLoaded || !isSignedIn) {
+      if (!isAuthenticated) {
         return;
       }
 
       try {
-        const token = await getToken();
         const headers = {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         };
 
         const fetchWithAuth = async (url: string) => {
-          const response = await fetch(url, { headers });
+          const response = await fetch(url, {
+            headers,
+          });
           if (response.status === 401) {
             router.push('/sign-in');
             return null;
           }
+          console.log('response YY: ', response);
           if (!response.ok) {
             throw new Error(`Failed to fetch from ${url}`);
           }
@@ -97,22 +99,22 @@ const ResumenSection = ({ juntaId }: { juntaId: string }) => {
           capitalData,
         ] = await Promise.all([
           fetchWithAuth(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/members/junta/${juntaId}`
+            `${process.env.NEXT_PUBLIC_API_URL}/members/junta/${juntaId}`
           ),
           fetchWithAuth(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/prestamos/junta/${juntaId}`
+            `${process.env.NEXT_PUBLIC_API_URL}/prestamos/junta/${juntaId}`
           ),
           fetchWithAuth(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/multas/junta/${juntaId}`
+            `${process.env.NEXT_PUBLIC_API_URL}/multas/junta/${juntaId}`
           ),
           fetchWithAuth(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/acciones/junta/${juntaId}`
+            `${process.env.NEXT_PUBLIC_API_URL}/acciones/junta/${juntaId}`
           ),
           fetchWithAuth(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/prestamos/junta/${juntaId}/pagos`
+            `${process.env.NEXT_PUBLIC_API_URL}/prestamos/junta/${juntaId}/pagos`
           ),
           fetchWithAuth(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/juntas/${juntaId}/capital`
+            `${process.env.NEXT_PUBLIC_API_URL}/capital/social/junta/${juntaId}`
           ),
         ]);
 
@@ -128,9 +130,9 @@ const ResumenSection = ({ juntaId }: { juntaId: string }) => {
     };
 
     fetchData();
-  }, [juntaId, isLoaded, isSignedIn, getToken, router]);
+  }, [juntaId, isAuthenticated, token, router]);
 
-  if (!isLoaded || !isSignedIn) {
+  if (!isAuthenticated) {
     return null;
   }
 

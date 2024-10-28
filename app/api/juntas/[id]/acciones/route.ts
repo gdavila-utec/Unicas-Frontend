@@ -1,17 +1,17 @@
 // app/api/acciones/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 // Import getAuth for authentication
-import { getAuth } from '@clerk/nextjs/server';
+import { headers } from 'next/headers';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { getToken } = getAuth(request);
-  const token = await getToken();
+  const headersList = headers();
+  const token = headersList.get('authorization')?.split('Bearer ')[1];
 
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/acciones/junta/${params.id}`,
+    `${process.env.NEXT_PUBLIC_API_URL}/acciones/junta/${params.id}`,
     {
       headers: {
         'Content-Type': 'application/json',
@@ -31,8 +31,8 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { getToken } = getAuth(request);
-    const token = await getToken();
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split('Bearer ')[1];
     const data = await request.json();
     const jsonBody = {
       member: data.member,
@@ -41,9 +41,9 @@ export async function POST(
       value: data.value,
       junta: params.id,
     };
-    console.log(jsonBody);
+
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/acciones/`,
+      `${process.env.NEXT_PUBLIC_API_URL}/acciones/`,
       {
         method: 'POST',
         headers: {
@@ -54,7 +54,7 @@ export async function POST(
       }
     );
     const message = await response.json();
-    console.log(message);
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -73,11 +73,11 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { getToken } = getAuth(request);
-    const token = await getToken();
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split('Bearer ')[1];
     const data = await request.json();
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/acciones/${data.id}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/acciones/${data.id}`,
       {
         method: 'DELETE',
         headers: {

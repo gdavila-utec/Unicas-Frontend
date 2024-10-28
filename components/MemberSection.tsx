@@ -20,7 +20,7 @@ import {
 import { EditIcon, Trash2Icon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@/hooks/useAuth';
 
 function MembersList({
   members,
@@ -91,14 +91,12 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
   });
 
   const [members, setMembers] = useState<any>([]);
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { isAdmin, isAuthenticated, isLoading, token } = useAuth();
 
   const handleAddMember = async () => {
-    const token = await getToken();
-    console.log('newMember: ', newMember);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/members/${juntaId}/add/${newMember.document_number}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/members/${juntaId}/add/${newMember.document_number}`,
         {
           method: 'POST',
           headers: {
@@ -109,7 +107,7 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
         }
       );
       const data = await response.json();
-      console.log('data: ', data);
+
       if (!response.ok) {
         throw new Error(data);
       }
@@ -127,9 +125,8 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
     }
   };
   const handleDeleteMember = async (id: number) => {
-    const token = await getToken();
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/members/${juntaId}/${id}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/members/${juntaId}/${id}`,
       {
         method: 'DELETE',
         headers: {
@@ -140,14 +137,12 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
       }
     );
     const data = await response.json();
-    console.log('Member deleted:', data);
     setMembers(members.filter((member: any) => member.id !== id));
   };
 
   const handleUpdateMember = async (id: number, updatedMember: any) => {
-    const token = await getToken();
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/members/${juntaId}/${id}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/members/${juntaId}/${id}`,
       {
         method: 'PUT',
         headers: {
@@ -158,14 +153,12 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
       }
     );
     const data = await response.json();
-    console.log('Member updated:', data);
     // setMembers(members.map((member : any) => member.id === memberId ? updatedMember : member));
   };
 
   const handleGetMembers = async () => {
-    const token = await getToken();
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/members/junta/${juntaId}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/members/junta/${juntaId}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -174,7 +167,6 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
       }
     );
     const data = await response.json();
-    console.log(data);
     setMembers(data);
   };
 

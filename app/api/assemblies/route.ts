@@ -1,23 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-export async function GET() {
-  return NextResponse.json({});
-}
+import { headers } from 'next/headers';
 
 export async function POST(request: NextRequest) {
   try {
-    // const newAssembly = await request.json();
-    
-    // // Add an id to the new assembly
-    // const id = assemblies.length + 1;
-    // const assemblyWithId = { id, ...newAssembly };
-    
-    // // Add the new assembly to our mock data
-    // assemblies.push(assemblyWithId);
-    
-    // return NextResponse.json(assemblyWithId, { status: 201 });
-    const data = await request.json() 
-    return NextResponse.json(data, { status: 201 });
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split('Bearer ')[1];
+
+    if (!token) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    const body = await request.json();
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/assemblies`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to create assembly');
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
-    return NextResponse.json({ message: 'Error creating assembly', error }, { status: 500 });
+    console.error('Error creating assembly:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

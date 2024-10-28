@@ -66,7 +66,6 @@ export default function MultaSection({ juntaId }: { juntaId: string }) {
 
   const handlePayMulta = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Reason', reason);
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/api/juntas/${juntaId}/multas`,
       {

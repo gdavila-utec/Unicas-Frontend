@@ -1,12 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import useAuthStore from '@/store/useAuthStore';
+import useAuthStore from '../store/useAuthStore';
 
 export function useAuth(requiredRole?: string) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-  const { isAuthenticated, role, token, isAdmin } = useAuthStore();
+  const { isAuthenticated, role, token, isAdmin, user } = useAuthStore();
 
   useEffect(() => {
     // Check if we're in the browser
@@ -40,5 +40,5 @@ export function useAuth(requiredRole?: string) {
     }
   }, [router, requiredRole]);
 
-  return { isLoading, isAuthenticated, role, token, isAdmin };
+  return { isLoading, isAuthenticated, role, token, isAdmin, user };
 }

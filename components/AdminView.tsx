@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AddJuntaComponent } from '@/components/AddJuntaComponent';
+
 import { JuntaCard } from '@/components/JuntaCard';
 import GestionUsuarios from '@/components/GestionUsuarios';
 import { LoadingSpinner } from '@/components/loading-spinner';

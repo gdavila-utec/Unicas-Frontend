@@ -34,6 +34,11 @@ interface LoginResponse {
   };
 }
 
+// Fallback API URL if environment variable is not set
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/api$/, '') ||
+  'https://unicas-nest-backend-production.up.railway.app';
+
 export default function SignInPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
@@ -66,43 +71,67 @@ export default function SignInPage() {
               : `+51${formData.phone_number}`
             : formData.phone_number,
       };
-      console.log(
-        'process.env.NEXT_PUBLIC_API_URL: ',
-        process.env.NEXT_PUBLIC_API_URL
-      );
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...(loginMethod === 'email'
-              ? { email: formData.email }
-              : { phone_number: formattedData.phone_number }),
-            password: formData.password,
-          }),
-          signal: controller.signal,
-          credentials: 'include', // Important for cookies
-        }
-      );
+      console.log('Using API URL:', API_URL);
+
+      const loginUrl = `${API_URL}/auth/login`;
+      console.log('Full login URL:', loginUrl);
+
+      const response = await fetch(loginUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          ...(loginMethod === 'email'
+            ? { email: formData.email }
+            : { phone_number: formattedData.phone_number }),
+          password: formData.password,
+        }),
+        signal: controller.signal,
+        credentials: 'include', // Important for cookies
+      });
 
       clearTimeout(timeoutId);
 
+      // Log response details for debugging
+      console.log('Response status:', response.status);
+      console.log(
+        'Response headers:',
+        Object.fromEntries(response.headers.entries())
+      );
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error en el inicio de sesión');
+        const contentType = response.headers.get('content-type');
+        let errorMessage = 'Error en el inicio de sesión';
+
+        try {
+          if (contentType?.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } else {
+            const textError = await response.text();
+            console.error('Non-JSON error response:', textError);
+          }
+        } catch (parseError) {
+          console.error('Error parsing response:', parseError);
+        }
+
+        throw new Error(errorMessage);
       }
 
       const data: LoginResponse = await response.json();
+      console.log('Login successful:', {
+        role: data.user.role,
+        id: data.user.id,
+      });
 
       // Store token in cookie
       Cookies.set('token', data.access_token, {
         expires: 1, // 1 day
         path: '/',
-        sameSite: 'strict',
+        sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
         secure: process.env.NODE_ENV === 'production',
       });
 

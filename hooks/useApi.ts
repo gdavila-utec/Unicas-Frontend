@@ -10,6 +10,11 @@ interface ApiResponse<T> {
   status: number;
 }
 
+// Helper to ensure endpoint starts with /api
+const normalizeEndpoint = (endpoint: string): string => {
+  return endpoint.startsWith('/api/') ? endpoint : `/api${endpoint}`;
+};
+
 // Generic GET hook
 export function useApiQuery<T>(
   endpoint: string,
@@ -25,7 +30,7 @@ export function useApiQuery<T>(
 
   return useQuery({
     queryKey: queryKey,
-    queryFn: () => fetchApi(endpoint, { requireAuth }),
+    queryFn: () => fetchApi(normalizeEndpoint(endpoint), { requireAuth }),
     enabled: (!requireAuth || isAuthenticated) && enabled,
     ...queryOptions,
   });
@@ -45,9 +50,9 @@ export function useApiMutation<TData, TVariables>(
 
   return useMutation({
     mutationFn: (variables: TVariables) =>
-      fetchApi(endpoint, {
+      fetchApi(normalizeEndpoint(endpoint), {
         method,
-        body: JSON.stringify(variables),
+        data: variables,
         requireAuth,
       }),
     onSuccess: (data) => {

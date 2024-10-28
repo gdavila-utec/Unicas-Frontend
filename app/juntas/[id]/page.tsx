@@ -25,9 +25,9 @@ import PrestamosSection from '@/components/PrestamosSection';
 import MultaSection from '@/components/MultasSection';
 import AcccionesSection from '@/components/AccionesSection';
 import PagosSection from '@/components/PagosSection';
-// import CapitalSocialSection from '@/components/CapitalSocialSection';
 import AgendaSection from '@/components/AgendaSection';
 import { Ajustes } from '@/components/Ajustes';
+import { api } from '@/utils/api';
 
 const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
   const [isClient, setIsClient] = useState(false);
@@ -43,27 +43,8 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/juntas/${params.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (response.status === 401) {
-        // Redirect to sign-in if unauthorized
-        router.push('/sign-in');
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch junta');
-      }
-
-      const data = await response.json();
+      // Using the api utility instead of direct fetch
+      const data = await api.get(`juntas/${params.id}`);
       setJunta(data);
     } catch (error) {
       console.error('Error fetching junta:', error);
@@ -96,7 +77,6 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
     { value: 'multas', label: 'Multas', icon: AlertTriangle },
     { value: 'acciones', label: 'Acciones', icon: TrendingUp },
     { value: 'pagos', label: 'Pagos', icon: CreditCard },
-
     { value: 'agenda', label: 'Agenda', icon: Calendar },
     { value: 'config', label: 'Configuración', icon: ChevronsLeftRight },
   ];
@@ -165,9 +145,6 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
                 <TabsContent value='pagos'>
                   <PagosSection juntaId={params.id} />
                 </TabsContent>
-                {/* <TabsContent value='capital'>
-                  <CapitalSocialSection juntaId={params.id} />
-                </TabsContent> */}
                 <TabsContent value='agenda'>
                   <AgendaSection juntaId={params.id} />
                 </TabsContent>

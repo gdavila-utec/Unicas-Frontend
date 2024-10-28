@@ -1,48 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 
-export async function GET(request: NextRequest) {
-  try {
-    const headersList = headers();
-    const token = headersList.get('authorization')?.split('Bearer ')[1];
-    const { searchParams } = new URL(request.url);
-    const juntaId = searchParams.get('juntaId');
-
-    if (!token) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/acciones/junta/${juntaId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch acciones');
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('Error fetching acciones:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
     const headersList = headers();
     const token = headersList.get('authorization')?.split('Bearer ')[1];
 
     if (!token) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { error: 'No authorization token provided' },
+        { status: 401 }
+      );
     }
 
-    const body = await request.json();
+    const data = await request.json();
 
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/acciones`,
@@ -52,24 +23,25 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          type: body.type,
-          amount: body.amount,
-          description: body.description,
-          juntaId: body.juntaId,
-          memberId: body.memberId,
-        }),
+        body: JSON.stringify(data),
       }
     );
 
     if (!response.ok) {
-      throw new Error('Failed to create accion');
+      const errorData = await response.json();
+      return NextResponse.json(
+        { error: errorData.message || 'Failed to create accion' },
+        { status: response.status }
+      );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    const responseData = await response.json();
+    return NextResponse.json(responseData, { status: 201 });
   } catch (error) {
     console.error('Error creating accion:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

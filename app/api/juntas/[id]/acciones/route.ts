@@ -1,29 +1,49 @@
 // app/api/acciones/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-// Import getAuth for authentication
 import { headers } from 'next/headers';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const headersList = headers();
-  const token = headersList.get('authorization')?.split('Bearer ')[1];
+  try {
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split('Bearer ')[1];
 
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/acciones/junta/${params.id}`,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
+    if (!token) {
+      return NextResponse.json(
+        { error: 'No authorization token provided' },
+        { status: 401 }
+      );
     }
-  );
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/acciones/junta/${params.id}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      // Forward the error status from the backend
+      return NextResponse.json(
+        { error: `Failed to fetch acciones: ${response.statusText}` },
+        { status: response.status }
+      );
+    }
+
+    const acciones = await response.json();
+    return NextResponse.json(acciones);
+  } catch (error) {
+    console.error('Error fetching acciones:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
-  const acciones = await response.json(); // Get acciones from the response
-  return NextResponse.json(acciones);
 }
 
 export async function POST(
@@ -33,6 +53,14 @@ export async function POST(
   try {
     const headersList = headers();
     const token = headersList.get('authorization')?.split('Bearer ')[1];
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'No authorization token provided' },
+        { status: 401 }
+      );
+    }
+
     const data = await request.json();
     const jsonBody = {
       member: data.member,
@@ -53,16 +81,21 @@ export async function POST(
         body: JSON.stringify(jsonBody),
       }
     );
-    const message = await response.json();
+
+    const responseData = await response.json();
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      return NextResponse.json(
+        { error: responseData.message || 'Failed to create accion' },
+        { status: response.status }
+      );
     }
-    return NextResponse.json(jsonBody, { status: 201 });
+
+    return NextResponse.json(responseData, { status: 201 });
   } catch (error) {
     console.error('Error posting accion:', error);
     return NextResponse.json(
-      { error: 'Failed to post accion' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -75,6 +108,14 @@ export async function DELETE(
   try {
     const headersList = headers();
     const token = headersList.get('authorization')?.split('Bearer ')[1];
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'No authorization token provided' },
+        { status: 401 }
+      );
+    }
+
     const data = await request.json();
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/acciones/${data.id}`,
@@ -86,9 +127,14 @@ export async function DELETE(
         },
       }
     );
+
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      return NextResponse.json(
+        { error: `Failed to delete accion: ${response.statusText}` },
+        { status: response.status }
+      );
     }
+
     return NextResponse.json(
       { message: 'Accion deleted successfully' },
       { status: 200 }
@@ -96,7 +142,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting accion:', error);
     return NextResponse.json(
-      { error: 'Failed to delete accion' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

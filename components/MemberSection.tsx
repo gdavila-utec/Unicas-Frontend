@@ -21,14 +21,23 @@ import { EditIcon, Trash2Icon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { api } from '@/utils/api';
+
+interface Member {
+  id: number;
+  full_name: string;
+  document_type: string;
+  document_number: string;
+  shares: number;
+}
 
 function MembersList({
   members,
   onEdit,
   onDelete,
 }: {
-  members: any[];
-  onEdit: (member: any, updatedMember: any) => void;
+  members: Member[];
+  onEdit: (member: Member, updatedMember: Partial<Member>) => void;
   onDelete: (memberId: number) => void;
 }) {
   return (
@@ -56,9 +65,6 @@ function MembersList({
                   </TableCell>
                   <TableCell>{member.shares}</TableCell>
                   <TableCell>
-                    {/* <Button onClick={() => onEdit(member, {})} variant="outline" size="sm" className="mr-2">
-                                        <EditIcon className="h-4 w-4" />
-                                    </Button> */}
                     <Button
                       onClick={() => onDelete(member.id)}
                       variant='outline'
@@ -90,89 +96,93 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
     is_superuser: false,
   });
 
-  const [members, setMembers] = useState<any>([]);
-  const { isAdmin, isAuthenticated, isLoading, token } = useAuth();
+  const [members, setMembers] = useState<Member[]>([]);
+  const { isAdmin, isAuthenticated } = useAuth();
 
   const handleAddMember = async () => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/members/${juntaId}/add/${newMember.document_number}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          //   body: JSON.stringify(newMember),
-        }
+      const data = await api.post<Member>(
+        `members/${juntaId}/add/${newMember.document_number}`
       );
-      const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data);
-      }
       setMembers([...members, data]);
       toast({
         title: 'Éxito',
         description: 'Miembro agregado correctamente',
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description:
+          error instanceof Error ? error.message : 'Error al agregar miembro',
         variant: 'destructive',
       });
     }
   };
+
   const handleDeleteMember = async (id: number) => {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/members/${juntaId}/${id}`,
-      {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        // body: JSON.stringify({ id: id }),
-      }
-    );
-    const data = await response.json();
-    setMembers(members.filter((member: any) => member.id !== id));
+    try {
+      await api.delete(`members/${juntaId}/${id}`);
+      setMembers(members.filter((member) => member.id !== id));
+      toast({
+        title: 'Éxito',
+        description: 'Miembro eliminado correctamente',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error al eliminar miembro',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleUpdateMember = async (id: number, updatedMember: any) => {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/members/${juntaId}/${id}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedMember),
-      }
-    );
-    const data = await response.json();
-    // setMembers(members.map((member : any) => member.id === memberId ? updatedMember : member));
+  const handleUpdateMember = async (
+    member: Member,
+    updatedMember: Partial<Member>
+  ) => {
+    try {
+      const data = await api.put<Member>(
+        `members/${juntaId}/${member.id}`,
+        updatedMember
+      );
+      setMembers(members.map((m) => (m.id === member.id ? data : m)));
+      toast({
+        title: 'Éxito',
+        description: 'Miembro actualizado correctamente',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Error al actualizar miembro',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleGetMembers = async () => {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/members/junta/${juntaId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-    const data = await response.json();
-    setMembers(data);
+    try {
+      const data = await api.get<Member[]>(`members/junta/${juntaId}`);
+      setMembers(data);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error al cargar miembros',
+        variant: 'destructive',
+      });
+    }
   };
 
   useEffect(() => {
-    handleGetMembers();
-  }, []);
+    if (isAuthenticated) {
+      handleGetMembers();
+    }
+  }, [isAuthenticated, juntaId]);
 
   return (
     <div className='flex flex-col gap-2'>

@@ -1,7 +1,84 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import {
+  logSecurityEvent,
+  createSecurityLog,
+  logAdminApiRequest,
+  logAdminApiSuccess,
+  logAdminApiError,
+} from '@/utils/security-logger';
+
+// Helper function to handle CORS
+function corsResponse(response: NextResponse) {
+  response.headers.set('Access-Control-Allow-Credentials', 'true');
+  response.headers.set(
+    'Access-Control-Allow-Origin',
+    process.env.NEXT_PUBLIC_API_URL ||
+      'https://unicas-nest-backend-production.up.railway.app'
+  );
+  response.headers.set(
+    'Access-Control-Allow-Methods',
+    'GET,DELETE,PATCH,POST,PUT,OPTIONS'
+  );
+  response.headers.set(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+  );
+  return response;
+}
+
+// Helper function to create error response
+function createErrorResponse(message: string, status: number) {
+  return corsResponse(
+    new NextResponse(JSON.stringify({ message }), {
+      status,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+  );
+}
+
+// Helper function to decode and validate JWT
+function decodeToken(token: string) {
+  try {
+    const [, payload] = token.split('.');
+    const decodedPayload = JSON.parse(atob(payload));
+
+    // Check token expiration
+    const now = Math.floor(Date.now() / 1000);
+    if (decodedPayload.exp && decodedPayload.exp < now) {
+      throw new Error('Token expired');
+    }
+
+    return decodedPayload;
+  } catch (error) {
+    return null;
+  }
+}
+
+// Helper to check if route requires admin access
+function isAdminRoute(pathname: string): boolean {
+  const adminRoutes = [
+    '/admin',
+    '/api/users',
+    '/api/juntas',
+    '/api/members',
+    '/api/assemblies',
+    '/api/capital',
+    '/api/multas',
+    '/api/prestamos',
+  ];
+
+  return adminRoutes.some((route) => pathname.startsWith(route));
+}
 
 export function middleware(request: NextRequest) {
+  // Handle CORS preflight requests
+  if (request.method === 'OPTIONS') {
+    return corsResponse(new NextResponse(null, { status: 200 }));
+  }
+
   const token = request.cookies.get('token')?.value;
   const { pathname } = request.nextUrl;
 
@@ -10,65 +87,123 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/sign-in') ||
     pathname.startsWith('/sign-up') ||
     pathname === '/' ||
-    pathname.startsWith('/auth/') || // Allow all auth endpoints
-    pathname.includes('/auth/') // Also catch nested auth routes
+    pathname.startsWith('/auth/') ||
+    pathname.includes('/auth/')
   ) {
-    // Add CORS headers for auth endpoints
-    if (pathname.includes('/auth/')) {
-      const response = NextResponse.next();
-      response.headers.set('Access-Control-Allow-Origin', '*');
-      response.headers.set(
-        'Access-Control-Allow-Methods',
-        'GET, POST, PUT, DELETE, OPTIONS'
-      );
-      response.headers.set(
-        'Access-Control-Allow-Headers',
-        'Content-Type, Authorization'
-      );
-      return response;
-    }
-    return NextResponse.next();
+    return corsResponse(NextResponse.next());
   }
 
   // Check if user is authenticated
   if (!token) {
-    // If it's an API request, return 401 instead of redirecting
+    logSecurityEvent(
+      createSecurityLog(request, 'UNAUTHORIZED', {
+        reason: 'No token provided',
+      })
+    );
+
     if (pathname.startsWith('/api/')) {
-      return new NextResponse(
-        JSON.stringify({ message: 'Authentication required' }),
-        {
-          status: 401,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      return createErrorResponse('Authentication required', 401);
     }
 
     const signInUrl = new URL('/sign-in', request.url);
     signInUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(signInUrl);
+    return corsResponse(NextResponse.redirect(signInUrl));
   }
 
-  // For admin routes, verify admin role from token
-  if (pathname.startsWith('/admin')) {
-    try {
-      // Decode the JWT token (you might want to verify it as well)
-      const [, payload] = token.split('.');
-      const decodedPayload = JSON.parse(atob(payload));
+  // Decode and validate token
+  const decodedToken = decodeToken(token);
+  if (!decodedToken) {
+    logSecurityEvent(
+      createSecurityLog(request, 'TOKEN_INVALID', {
+        reason: 'Token validation failed',
+      })
+    );
 
-      if (decodedPayload.role !== 'ADMIN') {
-        return NextResponse.redirect(new URL('/', request.url));
+    if (pathname.startsWith('/api/')) {
+      return createErrorResponse('Invalid token', 401);
+    }
+
+    const signInUrl = new URL('/sign-in', request.url);
+    signInUrl.searchParams.set('callbackUrl', pathname);
+    return corsResponse(NextResponse.redirect(signInUrl));
+  }
+
+  // Check admin access for protected routes
+  if (isAdminRoute(pathname)) {
+    const isApiRequest = pathname.startsWith('/api/');
+
+    // Log admin route access attempt
+    if (isApiRequest) {
+      logAdminApiRequest(request, decodedToken.sub, decodedToken.role);
+    } else {
+      logSecurityEvent(
+        createSecurityLog(request, 'ACCESS_ATTEMPT', {
+          userId: decodedToken.sub,
+          role: decodedToken.role,
+        })
+      );
+    }
+
+    if (decodedToken.role !== 'ADMIN') {
+      // Log denied admin access
+      if (isApiRequest) {
+        logAdminApiError(
+          request,
+          decodedToken.sub,
+          decodedToken.role,
+          403,
+          'Insufficient permissions for admin route'
+        );
+      } else {
+        logSecurityEvent(
+          createSecurityLog(request, 'ACCESS_DENIED', {
+            userId: decodedToken.sub,
+            role: decodedToken.role,
+            reason: 'Insufficient permissions for admin route',
+          })
+        );
       }
-    } catch (error) {
-      // If token is invalid, redirect to sign in
-      const signInUrl = new URL('/sign-in', request.url);
-      signInUrl.searchParams.set('callbackUrl', pathname);
-      return NextResponse.redirect(signInUrl);
+
+      if (isApiRequest) {
+        return createErrorResponse('Admin access required', 403);
+      }
+      return corsResponse(NextResponse.redirect(new URL('/', request.url)));
+    }
+
+    // Log successful admin access
+    if (isApiRequest) {
+      logAdminApiSuccess(request, decodedToken.sub, decodedToken.role, 200);
+    } else {
+      logSecurityEvent(
+        createSecurityLog(request, 'ADMIN_ACCESS', {
+          userId: decodedToken.sub,
+          role: decodedToken.role,
+        })
+      );
     }
   }
 
-  return NextResponse.next();
+  // Handle specific role-based access for other routes
+  if (pathname.startsWith('/juntas/')) {
+    const allowedRoles = ['ADMIN', 'FACILITADOR'];
+    if (!allowedRoles.includes(decodedToken.role)) {
+      // Log denied access to juntas
+      logSecurityEvent(
+        createSecurityLog(request, 'ACCESS_DENIED', {
+          userId: decodedToken.sub,
+          role: decodedToken.role,
+          reason: 'Insufficient permissions for juntas route',
+        })
+      );
+
+      if (pathname.startsWith('/api/')) {
+        return createErrorResponse('Insufficient permissions', 403);
+      }
+      return corsResponse(NextResponse.redirect(new URL('/', request.url)));
+    }
+  }
+
+  return corsResponse(NextResponse.next());
 }
 
 export const config = {

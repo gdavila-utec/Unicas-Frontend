@@ -15,13 +15,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Junta, User, ViewType, DeleteJuntaDialogProps } from '@/types/junta';
+import { Junta, ViewType, DeleteJuntaDialogProps } from '@/types/junta';
 import useAuthStore from '@/store/useAuthStore';
 import { useToast } from '@/hooks/use-toast';
 import { AddJuntaComponent } from '@/components/AddJuntaAltComponent';
 import GestionUsuarios from '@/components/GestionUsuarios';
+import { api, handleApiError } from '@/utils/api';
 
-// import CapitalSocialSection from '@/components/CapitalSocialSection';
+// Loading component
+const LoadingSpinner = () => (
+  <div className='h-screen w-full flex items-center justify-center'>
+    <Loader2 className='h-8 w-8 animate-spin text-primary' />
+  </div>
+);
+
+// Unauthorized component
+const Unauthorized = () => (
+  <div className='h-screen w-full flex flex-col items-center justify-center gap-4'>
+    <h1 className='text-2xl font-bold text-red-600'>Acceso No Autorizado</h1>
+    <p className='text-gray-600'>No tienes permisos para ver esta página.</p>
+    <Button onClick={() => (window.location.href = '/sign-in')}>
+      Volver al Inicio de Sesión
+    </Button>
+  </div>
+);
 
 const DeleteJuntaDialog: React.FC<DeleteJuntaDialogProps> = ({
   isOpen,
@@ -76,98 +93,74 @@ const Home: React.FC = () => {
   const [isDeletingJunta, setIsDeletingJunta] = useState(false);
   const [deleteJuntaId, setDeleteJuntaId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ViewType>(null);
-  // At the top with other state declarations
   const [view, setView] = useState<'crear-unica' | 'usuarios' | ''>('');
   const [isAddJuntaOpen, setIsAddJuntaOpen] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  const handleOpenDialogAddJunta = () => {
-    setIsAddJuntaOpen(true);
-  };
-
-  // Get auth state once on mount
   const { isAdmin, role, isAuthenticated, token, user } = useAuthStore();
-
   const router = useRouter();
 
-  const handleGetJuntas = useCallback(async () => {
-    if (!isAuthenticated || !token) return;
-
-    try {
-      const response = await fetch('/api/juntas', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          useAuthStore.getState().clearAuth();
-          router.push('/sign-in');
-          return;
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
+  // Check authentication and role
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (!isAuthenticated) {
+        router.replace('/sign-in');
+        return;
       }
 
-      const data = await response.json();
+      if (!role) {
+        useAuthStore.getState().clearAuth();
+        router.replace('/sign-in');
+        return;
+      }
+
+      setActiveView(role.toLowerCase() as ViewType);
+      setIsInitializing(false);
+    };
+
+    checkAuth();
+  }, [isAuthenticated, role, router]);
+
+  const handleGetJuntas = useCallback(async () => {
+    if (!isAuthenticated || !token || !isAdmin) return;
+
+    try {
+      const data = await api.get<Junta[]>('juntas');
       setJuntas(data);
     } catch (error) {
-      console.error('Failed to fetch juntas:', error);
+      const apiError = handleApiError(error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'No se pudieron cargar las juntas.',
+        description: apiError.message,
       });
+    } finally {
+      setLoading(false);
     }
-  }, [isAuthenticated, token, router, toast]);
-
-  // Initial auth check
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.replace('/sign-in');
-      return;
-    }
-
-    setActiveView((role?.toLowerCase() as ViewType) || null);
-  }, [isAuthenticated, role, router]);
+  }, [isAuthenticated, token, isAdmin, toast]);
 
   // Fetch juntas when view is set to admin
   useEffect(() => {
     if (activeView === 'admin' || activeView === 'facilitador') {
       handleGetJuntas();
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, [activeView, handleGetJuntas]);
 
-  // Rest of your handlers
   const handleLogout = useCallback(() => {
-    setView(''); // Reset view before logout
+    setView('');
     useAuthStore.getState().clearAuth();
     router.push('/sign-in');
   }, [router]);
 
   const handleDeleteJunta = useCallback(
     async (juntaId: string) => {
-      if (!isAuthenticated || !token) return;
+      if (!isAuthenticated || !token || !isAdmin) return;
 
       setIsDeletingJunta(true);
       try {
-        const response = await fetch(`/api/juntas/${juntaId}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            useAuthStore.getState().clearAuth();
-            router.push('/sign-in');
-            return;
-          }
-          throw new Error('Failed to delete junta');
-        }
-
+        await api.delete(`juntas/${juntaId}`);
         setJuntas((current) =>
           current.filter((j) => j.id.toString() !== juntaId)
         );
@@ -176,49 +169,41 @@ const Home: React.FC = () => {
           description: 'Junta eliminada correctamente.',
         });
       } catch (error) {
-        console.error('Failed to delete junta:', error);
+        const apiError = handleApiError(error);
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: 'No se pudo eliminar la junta.',
+          description: apiError.message,
         });
       } finally {
         setIsDeletingJunta(false);
         setDeleteJuntaId(null);
       }
     },
-    [isAuthenticated, token, router, toast]
+    [isAuthenticated, token, isAdmin, toast]
   );
 
-  // Show loading only on initial load
-  if (!activeView && loading) {
-    return (
-      <div className='h-screen w-full flex items-center justify-center'>
-        <Loader2 className='h-8 w-8 animate-spin text-primary' />
-      </div>
-    );
+  // Show loading state
+  if (isInitializing) {
+    return <LoadingSpinner />;
   }
-  console.log(
-    'user',
-    user,
-    'role',
-    role,
-    'isAdmin',
-    isAdmin,
-    'activeView',
-    activeView
-  );
+
+  // Show unauthorized message if not admin
+  if (!isAdmin && activeView !== 'member' && activeView !== 'user') {
+    return <Unauthorized />;
+  }
+
   return (
     <div className='min-h-full w-full max-h-full flex justify-center items-center bg-black'>
       <div className='w-full h-full sm:max-w-md p-2 md:max-w-6xl'>
         <Card className='shadow-lg rounded-t-md rounded-b-none p-0 bg-white p-4 border-none'>
           <CardContent className='space-y-4 rounded-none flex gap-5 justify-between items-center'>
-            <CardTitle className='text-3xl font-bold mt-0 '>
+            <CardTitle className='text-3xl font-bold mt-0'>
               Gestor de Juntas
             </CardTitle>
             {(activeView === 'member' || activeView === 'user') && (
               <div className='animate-in fade-in duration-300 space-y-0'>
-                <p className='text-center '>Bienvenido {user?.name}</p>
+                <p className='text-center'>Bienvenido {user?.name}</p>
                 <Button
                   className='w-full flex items-center justify-center gap-2 bg-black text-white'
                   onClick={handleLogout}
@@ -228,7 +213,7 @@ const Home: React.FC = () => {
               </div>
             )}
 
-            {activeView === 'admin' && (
+            {isAdmin && (
               <div className='animate-in fade-in duration-300 space-y-0'>
                 <div className='flex items-center justify-between gap-5'>
                   <Button
@@ -265,13 +250,15 @@ const Home: React.FC = () => {
             )}
           </CardContent>
         </Card>
-        {activeView === 'admin' && (
+        {isAdmin && (
           <Card className='shadow-lg rounded-t-none p-4 border-none'>
             <CardContent>
-              {view === 'crear-unica' ? (
+              {loading ? (
+                <LoadingSpinner />
+              ) : view === 'crear-unica' ? (
                 <div className='animate-in fade-in duration-300'>
                   <Button
-                    onClick={handleOpenDialogAddJunta}
+                    onClick={() => setIsAddJuntaOpen(true)}
                     className='w-full flex items-center justify-center gap-2 bg-black text-white mb-4'
                   >
                     <PlusCircle className='w-4 h-4' />
@@ -311,4 +298,5 @@ const Home: React.FC = () => {
     </div>
   );
 };
+
 export default Home;

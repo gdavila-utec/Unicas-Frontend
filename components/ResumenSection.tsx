@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { api } from '@/utils/api';
 
 interface Member {
   id: number;
@@ -60,7 +61,7 @@ const ResumenSection = ({ juntaId }: { juntaId: string }) => {
   const [acciones, setAcciones] = useState<Accion[]>([]);
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [capital, setCapital] = useState<Capital | null>(null);
-  const { isAuthenticated, isAdmin, token } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -70,26 +71,6 @@ const ResumenSection = ({ juntaId }: { juntaId: string }) => {
       }
 
       try {
-        const headers = {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        };
-
-        const fetchWithAuth = async (url: string) => {
-          const response = await fetch(url, {
-            headers,
-          });
-          if (response.status === 401) {
-            router.push('/sign-in');
-            return null;
-          }
-          console.log('response YY: ', response);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch from ${url}`);
-          }
-          return response.json();
-        };
-
         const [
           membersData,
           loansData,
@@ -98,39 +79,30 @@ const ResumenSection = ({ juntaId }: { juntaId: string }) => {
           pagosData,
           capitalData,
         ] = await Promise.all([
-          fetchWithAuth(
-            `${process.env.NEXT_PUBLIC_API_URL}/members/junta/${juntaId}`
-          ),
-          fetchWithAuth(
-            `${process.env.NEXT_PUBLIC_API_URL}/prestamos/junta/${juntaId}`
-          ),
-          fetchWithAuth(
-            `${process.env.NEXT_PUBLIC_API_URL}/multas/junta/${juntaId}`
-          ),
-          fetchWithAuth(
-            `${process.env.NEXT_PUBLIC_API_URL}/acciones/junta/${juntaId}`
-          ),
-          fetchWithAuth(
-            `${process.env.NEXT_PUBLIC_API_URL}/prestamos/junta/${juntaId}/pagos`
-          ),
-          fetchWithAuth(
-            `${process.env.NEXT_PUBLIC_API_URL}/capital/social/junta/${juntaId}`
-          ),
+          api.get<Member[]>(`members/junta/${juntaId}`),
+          api.get<Loan[]>(`prestamos/junta/${juntaId}`),
+          api.get<Multa[]>(`multas/junta/${juntaId}`),
+          api.get<Accion[]>(`acciones/junta/${juntaId}`),
+          api.get<Pago[]>(`prestamos/junta/${juntaId}/pagos`),
+          api.get<Capital>(`capital/social/junta/${juntaId}`),
         ]);
 
-        if (membersData) setMembers(membersData);
-        if (loansData) setLoans(loansData);
-        if (multasData) setMultas(multasData);
-        if (accionesData) setAcciones(accionesData);
-        if (pagosData) setPagos(pagosData);
-        if (capitalData) setCapital(capitalData);
+        setMembers(membersData);
+        setLoans(loansData);
+        setMultas(multasData);
+        setAcciones(accionesData);
+        setPagos(pagosData);
+        setCapital(capitalData);
       } catch (error) {
         console.error('Error fetching data:', error);
+        if (error instanceof Error && error.message === 'Session expired') {
+          router.push('/sign-in');
+        }
       }
     };
 
     fetchData();
-  }, [juntaId, isAuthenticated, token, router]);
+  }, [juntaId, isAuthenticated, router]);
 
   if (!isAuthenticated) {
     return null;

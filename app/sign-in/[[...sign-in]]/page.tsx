@@ -14,6 +14,7 @@ import {
 } from '../../../components/ui/card';
 import { Loader2 } from 'lucide-react';
 import Cookies from 'js-cookie';
+import axiosInstance from '../../../utils/axios';
 
 type LoginMethod = 'email' | 'phone';
 
@@ -34,11 +35,6 @@ interface LoginResponse {
   };
 }
 
-// Fallback API URL if environment variable is not set
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/api$/, '') ||
-  'https://unicas-nest-backend-production.up.railway.app';
-
 export default function SignInPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
@@ -56,10 +52,6 @@ export default function SignInPage() {
     setLoading(true);
     setError('');
 
-    // Create an AbortController for timeout management
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-
     try {
       // Format phone number if needed
       const formattedData = {
@@ -72,56 +64,14 @@ export default function SignInPage() {
             : formData.phone_number,
       };
 
-      console.log('Using API URL:', API_URL);
-
-      const loginUrl = `${API_URL}/auth/login`;
-      console.log('Full login URL:', loginUrl);
-
-      const response = await fetch(loginUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({
-          ...(loginMethod === 'email'
-            ? { email: formData.email }
-            : { phone_number: formattedData.phone_number }),
-          password: formData.password,
-        }),
-        signal: controller.signal,
-        credentials: 'include', // Important for cookies
+      const response = await axiosInstance.post<LoginResponse>('/auth/login', {
+        ...(loginMethod === 'email'
+          ? { email: formData.email }
+          : { phone_number: formattedData.phone_number }),
+        password: formData.password,
       });
 
-      clearTimeout(timeoutId);
-
-      // Log response details for debugging
-      console.log('Response status:', response.status);
-      console.log(
-        'Response headers:',
-        Object.fromEntries(response.headers.entries())
-      );
-
-      if (!response.ok) {
-        const contentType = response.headers.get('content-type');
-        let errorMessage = 'Error en el inicio de sesión';
-
-        try {
-          if (contentType?.includes('application/json')) {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } else {
-            const textError = await response.text();
-            console.error('Non-JSON error response:', textError);
-          }
-        } catch (parseError) {
-          console.error('Error parsing response:', parseError);
-        }
-
-        throw new Error(errorMessage);
-      }
-
-      const data: LoginResponse = await response.json();
+      const data = response.data;
       console.log('Login successful:', {
         role: data.user.role,
         id: data.user.id,
@@ -165,18 +115,11 @@ export default function SignInPage() {
     } catch (error) {
       console.error('Login error:', error);
       if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          setError(
-            'La solicitud ha tardado demasiado. Por favor, inténtalo de nuevo.'
-          );
-        } else {
-          setError(error.message);
-        }
+        setError(error.message);
       } else {
         setError('Error en el inicio de sesión');
       }
     } finally {
-      clearTimeout(timeoutId);
       setLoading(false);
     }
   };

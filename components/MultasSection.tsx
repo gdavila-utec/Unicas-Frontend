@@ -17,90 +17,103 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import React, { useEffect, useState } from 'react';
+import { api } from '@/utils/api';
+import { useToast } from '@/hooks/use-toast';
+
+interface Member {
+  id: number;
+  full_name: string;
+}
+
+interface Multa {
+  id: number;
+  member_name: string;
+  reason: string;
+  amount: number;
+  status: string;
+}
 
 export default function MultaSection({ juntaId }: { juntaId: string }) {
+  const { toast } = useToast();
   const [member, setMember] = useState('');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [multas, setMultas] = useState<any[]>([]);
-  const [members, setMembers] = useState<any[]>([]);
+  const [multas, setMultas] = useState<Multa[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [reason, setReason] = useState<string>('');
 
   useEffect(() => {
-    const fetchMembers = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/members/${juntaId}`
-        );
-        if (!response.ok) throw new Error('Failed to fetch members');
-        const data = await response.json();
-        setMembers(data);
+        const [membersData, multasData] = await Promise.all([
+          api.get<Member[]>(`members/${juntaId}`),
+          api.get<Multa[]>(`juntas/${juntaId}/multas`),
+        ]);
+        setMembers(membersData);
+        setMultas(multasData);
       } catch (error) {
-        console.error('Error fetching members:', error);
+        console.error('Error fetching data:', error);
+        toast({
+          title: 'Error',
+          description:
+            error instanceof Error ? error.message : 'Error al cargar datos',
+          variant: 'destructive',
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
-    const fetchMultas = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/juntas/${juntaId}/multas`
-        );
-        if (!response.ok) throw new Error('Failed to fetch multas');
-        const data = await response.json();
-        setMultas(data);
-      } catch (error) {
-        console.error('Error fetching multas:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchMembers();
-    fetchMultas();
-  }, [juntaId]);
+    fetchData();
+  }, [juntaId, toast]);
 
   const handlePayMulta = async (e: React.FormEvent) => {
     e.preventDefault();
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/juntas/${juntaId}/multas`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reason: reason,
-          amount: amount,
-          member: member,
-          comment: description,
-        }),
-      }
-    );
+    try {
+      const newMulta = await api.post<Multa>(`juntas/${juntaId}/multas`, {
+        reason,
+        amount,
+        member,
+        comment: description,
+      });
 
-    if (response.ok) {
-      const newMulta = await response.json();
       setMultas([...multas, newMulta]);
       setMember('');
       setDescription('');
       setAmount('');
+      setReason('');
+
+      toast({
+        title: 'Éxito',
+        description: 'Multa registrada correctamente',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error al registrar multa',
+        variant: 'destructive',
+      });
     }
   };
 
   const handleDeleteMulta = async (multaId: number) => {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/juntas/${juntaId}/multas/${multaId}`,
-      {
-        method: 'DELETE',
-      }
-    );
-
-    if (response.ok) {
+    try {
+      await api.delete(`juntas/${juntaId}/multas/${multaId}`);
       setMultas(multas.filter((multa) => multa.id !== multaId));
-    } else {
-      console.error('Failed to delete multa');
+      toast({
+        title: 'Éxito',
+        description: 'Multa eliminada correctamente',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error al eliminar multa',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -171,7 +184,7 @@ export default function MultaSection({ juntaId }: { juntaId: string }) {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
-              <Button onClick={handlePayMulta}>Pagar Multa</Button>
+              <Button type='submit'>Pagar Multa</Button>
             </form>
           )}
         </CardContent>
@@ -192,6 +205,7 @@ export default function MultaSection({ juntaId }: { juntaId: string }) {
                   <TableHead>Descripción</TableHead>
                   <TableHead>Monto</TableHead>
                   <TableHead>Estado</TableHead>
+                  <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -202,7 +216,11 @@ export default function MultaSection({ juntaId }: { juntaId: string }) {
                     <TableCell>{multa.amount}</TableCell>
                     <TableCell>{multa.status}</TableCell>
                     <TableCell>
-                      <Button onClick={() => handleDeleteMulta(multa.id)}>
+                      <Button
+                        variant='destructive'
+                        size='sm'
+                        onClick={() => handleDeleteMulta(multa.id)}
+                      >
                         Eliminar
                       </Button>
                     </TableCell>
@@ -211,7 +229,7 @@ export default function MultaSection({ juntaId }: { juntaId: string }) {
               </TableBody>
             </Table>
           ) : (
-            <div>No fines available.</div>
+            <div>No hay multas registradas.</div>
           )}
         </CardContent>
       </Card>

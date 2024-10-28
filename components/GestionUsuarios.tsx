@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
 import {
   Table,
   TableBody,
@@ -18,6 +17,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import useAuthStore from '@/store/useAuthStore';
+import { api } from '@/utils/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface User {
   id: string;
@@ -29,27 +30,22 @@ interface User {
 
 export default function GestionUsuarios() {
   const { token } = useAuthStore();
+  const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
-
   const [loading, setLoading] = useState(true);
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
-
-      const data = await response.json();
-
+      const data = await api.get<User[]>('users');
       setUsers(data);
     } catch (error) {
       console.error('Error loading users:', error);
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error al cargar usuarios',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -57,21 +53,7 @@ export default function GestionUsuarios() {
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}/role`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ role: newRole }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to update user role');
-      }
+      await api.put(`users/${userId}/role`, { role: newRole });
 
       setUsers(
         users.map((user) =>
@@ -79,10 +61,18 @@ export default function GestionUsuarios() {
         )
       );
 
-      alert('Rol actualizado exitosamente');
+      toast({
+        title: 'Éxito',
+        description: 'Rol actualizado correctamente',
+      });
     } catch (error) {
       console.error('Error updating role:', error);
-      alert('Error al actualizar el rol');
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error al actualizar el rol',
+        variant: 'destructive',
+      });
     }
   };
 

@@ -13,13 +13,16 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const response = await fetch(`/api/junta-users/${params.id}/`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/junta-users/${params.id}/`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+      }
+    );
 
     if (!response.ok) {
       return NextResponse.json(
@@ -72,14 +75,17 @@ export async function POST(
     };
 
     // First API call to create user
-    const userResponse = await fetch(`/api/users/`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(userData),
-    });
+    const userResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/users/`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      }
+    );
 
     if (!userResponse.ok) {
       const errorData = await userResponse.json();
@@ -100,17 +106,20 @@ export async function POST(
     }
 
     // Second API call to add user to junta
-    const juntaResponse = await fetch(`/api/juntas/add`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        junta_id: Number(params.id),
-        user_id: Number(newUser.id),
-      }),
-    });
+    const juntaResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/juntas/add`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          junta_id: Number(params.id),
+          user_id: Number(newUser.id),
+        }),
+      }
+    );
 
     if (!juntaResponse.ok) {
       // Try to get error details from response
@@ -165,13 +174,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Missing user ID' }, { status: 400 });
     }
 
-    const response = await fetch(`/api/users/${requestBody.id}/`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/users/${requestBody.id}/`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
     if (!response.ok) {
       return NextResponse.json(

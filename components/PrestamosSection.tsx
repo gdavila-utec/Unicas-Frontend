@@ -19,23 +19,31 @@ import {
 } from '@/components/ui/table';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { api } from '@/utils/api';
+import { useToast } from '@/hooks/use-toast';
 
-interface LoanPayment {
+interface Member {
   id: number;
-  request_date: string; // Updated field
-  amount: string; // Updated field
-  monthly_interest: string; // Updated field
-  number_of_installments: number; // Updated field
-  approved: boolean; // Updated field
-  rejected: boolean; // Updated field
-  rejection_reason: string; // Updated field
-  paid: boolean; // Updated field
-  remaining_amount: string; // Updated field
-  remaining_installments: number; // Updated field
-  member: number; // Updated field
-  junta: number; // Updated field
-  loan_type: string; // New field
-  // monthly_payment: number | null; // New field
+  full_name: string;
+}
+
+interface Prestamo {
+  id: number;
+  request_date: string;
+  amount: string;
+  monthly_interest: string;
+  number_of_installments: number;
+  approved: boolean;
+  rejected: boolean;
+  rejection_reason: string;
+  paid: boolean;
+  remaining_amount: string;
+  remaining_installments: number;
+  member: number;
+  member_name: string;
+  junta: number;
+  loan_type: string;
+  status: string;
 }
 
 interface NuevoPrestamoForm {
@@ -44,12 +52,13 @@ interface NuevoPrestamoForm {
   montoSolicitado: number;
   interesMensual: number;
   cantidadCuotas: number;
-  tipoPrestamo: string; // New field
+  tipoPrestamo: string;
 }
 
 const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
-  const [prestamos, setPrestamos] = useState<any[]>([]);
-  const [members, setMembers] = useState<any[]>([]);
+  const { toast } = useToast();
+  const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [nuevoPrestamoForm, setNuevoPrestamoForm] = useState<NuevoPrestamoForm>(
     {
@@ -58,44 +67,35 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
       montoSolicitado: 0,
       interesMensual: 0,
       cantidadCuotas: 0,
-      tipoPrestamo: 'Cuota a rebatir', // Default value
+      tipoPrestamo: 'Cuota a rebatir',
     }
   );
 
-  useEffect(() => {
+  const fetchData = async () => {
     setIsLoading(true);
-    fetchPrestamos();
-    handleGetMembers();
-    setIsLoading(false);
-  }, []);
-
-  const handleGetMembers = async () => {
     try {
-      const response = await fetch(`/members/${juntaId}/`);
-      if (!response.ok) throw new Error('Failed to fetch members');
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        setMembers(data);
-      } else {
-        console.error('Received data is not an array:', data);
-        setMembers([]);
-      }
+      const [membersData, prestamosData] = await Promise.all([
+        api.get<Member[]>(`members/${juntaId}`),
+        api.get<Prestamo[]>(`prestamos/junta/${juntaId}`),
+      ]);
+      setMembers(membersData);
+      setPrestamos(prestamosData);
     } catch (error) {
-      console.error('Error fetching members:', error);
-      setMembers([]);
+      console.error('Error fetching data:', error);
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error al cargar datos',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const fetchPrestamos = async (): Promise<void> => {
-    try {
-      const response = await fetch(`/prestamos/${juntaId}`);
-      if (!response.ok) throw new Error('Failed to fetch prestamos');
-      const data = await response.json();
-      setPrestamos(data);
-    } catch (error) {
-      console.error('Error fetching prestamos:', error);
-    }
-  };
+  useEffect(() => {
+    fetchData();
+  }, [juntaId]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -103,6 +103,7 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
     const { name, value } = e.target;
     setNuevoPrestamoForm((prev) => ({ ...prev, [name]: value }));
   };
+
   const handleSubmit = async (
     e: React.FormEvent<HTMLFormElement>
   ): Promise<void> => {
@@ -116,41 +117,60 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
         remaining_amount: nuevoPrestamoForm.montoSolicitado,
         remaining_installments: nuevoPrestamoForm.cantidadCuotas,
         member: parseInt(nuevoPrestamoForm.miembro),
-        junta: juntaId,
-        loan_type: nuevoPrestamoForm.tipoPrestamo, // New field
+        junta: parseInt(juntaId),
+        loan_type: nuevoPrestamoForm.tipoPrestamo,
       };
 
-      const response = await fetch('/api/prestamos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(prestamoData),
-      });
-      if (!response.ok) throw new Error('Failed to add prestamo');
-      await fetchPrestamos(); // Refresh the list
-    } catch (error) {
-      console.error('Error adding prestamo:', error);
-    }
-  };
+      await api.post('prestamos', prestamoData);
+      await fetchData();
 
-  const handleUpdate = async (id: number): Promise<void> => {
-    // Implement update logic here
+      setNuevoPrestamoForm({
+        miembro: '',
+        fechaSolicitud: '',
+        montoSolicitado: 0,
+        interesMensual: 0,
+        cantidadCuotas: 0,
+        tipoPrestamo: 'Cuota a rebatir',
+      });
+
+      toast({
+        title: 'Éxito',
+        description: 'Préstamo registrado correctamente',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Error al registrar préstamo',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDelete = async (id: number): Promise<void> => {
     try {
-      const response = await fetch(`/prestamos`, {
-        method: 'DELETE',
-        body: JSON.stringify({ id: id }),
+      await api.delete(`prestamos/${id}`);
+      await fetchData();
+      toast({
+        title: 'Éxito',
+        description: 'Préstamo eliminado correctamente',
       });
-      if (!response.ok) throw new Error('Failed to delete prestamo');
-      await fetchPrestamos(); // Refresh the list
     } catch (error) {
-      console.error('Error deleting prestamo:', error);
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error al eliminar préstamo',
+        variant: 'destructive',
+      });
     }
   };
 
   if (isLoading) {
-    return <h1>Loading...</h1>;
+    return (
+      <div className='flex justify-center items-center p-8'>Cargando...</div>
+    );
   }
 
   return (
@@ -242,7 +262,6 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
               <div>
                 <Label htmlFor='tipoPrestamo'>Tipo de Préstamo</Label>
                 <Select
-                  name='tipoPrestamo'
                   value={nuevoPrestamoForm.tipoPrestamo}
                   onValueChange={(value) =>
                     handleInputChange({
@@ -278,20 +297,20 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
           <h2 className='text-2xl font-bold'>Préstamos Activos</h2>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Miembro</TableHead>
-                <TableHead>Monto Original</TableHead>
-                <TableHead>Monto Adeudado</TableHead>
-                <TableHead>Cuotas Pendientes</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Opciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {prestamos.length > 0 &&
-                prestamos.map((prestamo) => (
+          {prestamos.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Miembro</TableHead>
+                  <TableHead>Monto Original</TableHead>
+                  <TableHead>Monto Adeudado</TableHead>
+                  <TableHead>Cuotas Pendientes</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Opciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {prestamos.map((prestamo) => (
                   <TableRow key={prestamo.id}>
                     <TableCell>{prestamo.member_name}</TableCell>
                     <TableCell>S/.{prestamo.amount}</TableCell>
@@ -300,10 +319,9 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
                     <TableCell>{prestamo.status}</TableCell>
                     <TableCell>
                       <div className='flex space-x-2'>
-                        {/* <Button variant="ghost" size="icon" onClick={() => handleUpdate(prestamo.id)}><Pencil className="h-4 w-4" /></Button> */}
                         <Button
-                          variant='ghost'
-                          size='icon'
+                          variant='destructive'
+                          size='sm'
                           onClick={() => handleDelete(prestamo.id)}
                         >
                           <Trash2 className='h-4 w-4' />
@@ -312,8 +330,13 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
                     </TableCell>
                   </TableRow>
                 ))}
-            </TableBody>
-          </Table>
+              </TableBody>
+            </Table>
+          ) : (
+            <div className='text-center py-4'>
+              No hay préstamos registrados.
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

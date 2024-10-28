@@ -10,26 +10,36 @@ export async function GET(
     const token = headersList.get('authorization')?.split('Bearer ')[1];
 
     if (!token) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { error: 'No authorization token provided' },
+        { status: 401 }
+      );
     }
 
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/capital/social/junta/${params.id}`,
       {
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
       }
     );
 
     if (!response.ok) {
-      throw new Error('Failed to fetch capital social');
+      return NextResponse.json(
+        { error: `Failed to fetch capital social: ${response.statusText}` },
+        { status: response.status }
+      );
     }
 
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error fetching capital social:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

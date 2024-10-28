@@ -56,10 +56,6 @@ export default function SignInPage() {
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
     try {
-      if (!process.env.NEXT_PUBLIC_API_URL) {
-        throw new Error('API URL not configured');
-      }
-
       // Format phone number if needed
       const formattedData = {
         ...formData,
@@ -70,6 +66,10 @@ export default function SignInPage() {
               : `+51${formData.phone_number}`
             : formData.phone_number,
       };
+      console.log(
+        'process.env.NEXT_PUBLIC_API_URL: ',
+        process.env.NEXT_PUBLIC_API_URL
+      );
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,

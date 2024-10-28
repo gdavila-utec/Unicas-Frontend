@@ -11,11 +11,14 @@ import {
 // Helper function to handle CORS
 function corsResponse(response: NextResponse) {
   response.headers.set('Access-Control-Allow-Credentials', 'true');
-  response.headers.set(
-    'Access-Control-Allow-Origin',
-    process.env.NEXT_PUBLIC_API_URL ||
-      'https://unicas-nest-backend-production.up.railway.app'
-  );
+
+  // Allow both development and production origins
+  const origin =
+    process.env.NODE_ENV === 'production'
+      ? 'https://unicas-frontend-production.up.railway.app'
+      : 'http://localhost:3000';
+
+  response.headers.set('Access-Control-Allow-Origin', origin);
   response.headers.set(
     'Access-Control-Allow-Methods',
     'GET,DELETE,PATCH,POST,PUT,OPTIONS'

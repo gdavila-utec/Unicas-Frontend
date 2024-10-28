@@ -12,7 +12,7 @@ export default function SignUpPage() {
   const [formData, setFormData] = useState({
     phone_number: '',
     password: '',
-    // username: '',
+    username: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,9 +35,6 @@ export default function SignUpPage() {
           body: JSON.stringify(formData),
         }
       );
-
-      console.log('formData: ', formData);
-      console.log('response: ', response);
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.message || 'Error en el registro');
@@ -69,10 +66,10 @@ export default function SignUpPage() {
           <div className='space-y-4 rounded-md shadow-sm'>
             <div>
               <label
-                htmlFor='username'
+                htmlFor='phone_number'
                 className='sr-only'
               >
-                Telefono
+                Celular
               </label>
               <input
                 id='phone_number'
@@ -87,26 +84,26 @@ export default function SignUpPage() {
                 }
               />
             </div>
-            {/* <div>
+            <div>
               <label
-                htmlFor='email'
+                htmlFor='username'
                 className='sr-only'
               >
-                Email
+                DNI:
               </label>
               <input
-                id='email'
-                name='email'
-                type='email'
+                id='username'
+                name='username'
+                type='username'
                 required
                 className='relative block w-full rounded-md border-0 p-2 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-500'
-                placeholder='Email'
-                value={formData.phone_number}
+                placeholder='DNI'
+                value={formData.username}
                 onChange={(e) =>
-                  setFormData({ ...formData, phone_number: e.target.value })
+                  setFormData({ ...formData, username: e.target.value })
                 }
               />
-            </div> */}
+            </div>
             <div>
               <label
                 htmlFor='password'

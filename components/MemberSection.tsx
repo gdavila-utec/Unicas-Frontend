@@ -23,31 +23,7 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/utils/api';
-
-const parseErrorMessage = (error: unknown): string => {
-  // Case 1: Handle nested Error objects
-  if (error instanceof Error) {
-    // Access the nested error message if it exists
-    const nestedMessage = (error as any).cause?.message || error.message;
-
-    // Clean up the message by removing "Error: " prefix if it exists
-    return nestedMessage.replace(/^Error:\s*/, '');
-  }
-
-  // Case 2: Error with response data object (Axios error)
-  if ((error as any).response?.data) {
-    const { message, error: errorMsg } = (error as any).response.data;
-    return message || errorMsg || 'An error occurred';
-  }
-
-  // Case 3: Error is a string
-  if (typeof error === 'string') {
-    return error;
-  }
-
-  // Default case
-  return 'An unexpected error occurred';
-};
+import { useError } from '@/hooks/useError';
 
 const formatDateForInput = (dateString: string | null | undefined): string => {
   if (!dateString) return '';
@@ -230,6 +206,7 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
   const [newMember, setNewMember] = useState<NewMemberForm>(defaultFormValues);
+  const { perro, setError } = useError();
 
   const handleGetMembers = async () => {
     if (!juntaId) return;
@@ -240,9 +217,10 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
       setMembers(Array.isArray(response) ? response : []);
     } catch (error) {
       console.error('Error fetching members:', error);
+      setError(error);
       toast({
         title: 'Error',
-        description: 'Error al cargar la lista de miembros',
+        description: perro,
         variant: 'destructive',
       });
     } finally {
@@ -265,6 +243,7 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
         formattedData
       );
 
+      console.log('response: ', response);
       // Refresh the members list
       await handleGetMembers();
 

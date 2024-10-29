@@ -37,6 +37,8 @@ import { CalendarIcon } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
+import { useError } from '@/hooks/useError';
+import { api } from '@/utils/api';
 
 interface AccionPurchase {
   id: number;
@@ -55,11 +57,15 @@ const formSchema = z.object({
 });
 
 export default function AccionesSection({ juntaId }: { juntaId: string }) {
+  const { perro, setError } = useError();
+
   const [history, setHistory] = useState<AccionPurchase[]>([]);
+  console.log('history: ', history);
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  console.log('members: ', members);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -72,13 +78,17 @@ export default function AccionesSection({ juntaId }: { juntaId: string }) {
   const fetchHistory = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/juntas/${juntaId}/acciones`);
-      if (response.ok) {
-        const data = await response.json();
-        setHistory(data);
-      }
+      const response = await api.get<Member[]>(`acciones/junta/${juntaId}`);
+      console.log('response: ', response);
+      setHistory(Array.isArray(response) ? response : []);
     } catch (error) {
-      console.error('Error fetching acciones:', error);
+      console.error('Error fetching members:', error);
+      setError(error);
+      toast({
+        title: 'Error',
+        description: perro,
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -86,12 +96,16 @@ export default function AccionesSection({ juntaId }: { juntaId: string }) {
   const fetchMembers = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/members/${juntaId}`);
-      if (!response.ok) throw new Error('Failed to fetch members');
-      const data = await response.json();
-      setMembers(data);
+      const response = await api.get<Member[]>(`members/junta/${juntaId}`);
+      setMembers(Array.isArray(response) ? response : []);
     } catch (error) {
       console.error('Error fetching members:', error);
+      setError(error);
+      toast({
+        title: 'Error',
+        description: perro,
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -104,19 +118,24 @@ export default function AccionesSection({ juntaId }: { juntaId: string }) {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
+      // const jsonBody = {
+      //   member: values.member,
+      //   date: values.date,
+      //   quantity: values.quantity,
+      //   value: values.value,
+      //   junta: juntaId,
+      // };
       const jsonBody = {
-        member: values.member,
-        date: values.date,
-        quantity: values.quantity,
-        value: values.value,
-        junta: juntaId,
+        type: 'COMPRA',
+        amount: values.quantity,
+        description: `Compra de acciones por ${values.quantity} acciones el dia ${values.date}`,
+        juntaId: juntaId,
+        memberId: values.member,
       };
-      const response = await fetch(`/api/juntas/${juntaId}/acciones`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(jsonBody),
-      });
-      if (!response.ok) throw new Error('Failed to add accion');
+
+      const response = await api.post<Member[]>(`acciones`, jsonBody);
+      console.log('response: ', response);
+
       await fetchHistory();
     } catch (error) {
       console.error('Error adding accion:', error);
@@ -124,13 +143,11 @@ export default function AccionesSection({ juntaId }: { juntaId: string }) {
   };
 
   const handleDeleteAccion = async (accionId: number) => {
+    console.log('accionId: ', accionId);
     try {
-      const response = await fetch(`/api/juntas/${juntaId}/acciones`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: accionId }),
-      });
-      if (!response.ok) throw new Error('Failed to delete accion');
+      const response = await api.delete<Member[]>(`acciones/${accionId}`);
+      console.log('response: ', response);
+
       await fetchHistory();
     } catch (error) {
       console.error('Error deleting accion:', error);
@@ -299,12 +316,12 @@ export default function AccionesSection({ juntaId }: { juntaId: string }) {
               <TableBody>
                 {history.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell>{item.member_name}</TableCell>
+                    {/* <TableCell>{item.quantity}</TableCell> */}
                     <TableCell>
-                      {format(new Date(item.date), 'yyyy-MM-dd HH:mm:ss')}
+                      {/* {format(new Date(item.date), 'yyyy-MM-dd HH:mm:ss')} */}
                     </TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>S/{item.value}</TableCell>
+                    <TableCell>{item.member_name}</TableCell>
+                    <TableCell>S/{item.quantity}</TableCell>
                     <TableCell>
                       <Button onClick={() => handleDeleteAccion(item.id)}>
                         Eliminar

@@ -40,7 +40,6 @@ export default function SignInPage() {
   const setAuth = useAuthStore((state) => state.setAuth);
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('phone');
   const [formData, setFormData] = useState<FormData>({
-    email: '',
     phone_number: '',
     password: '',
   });
@@ -64,10 +63,17 @@ export default function SignInPage() {
             : formData.phone_number,
       };
 
+      console.log('data sent: ', {
+        ...(loginMethod === 'email'
+          ? { email: formData.email }
+          : { phone: formattedData.phone_number }),
+        password: formData.password,
+      });
+
       const response = await axiosInstance.post<LoginResponse>('/auth/login', {
         ...(loginMethod === 'email'
           ? { email: formData.email }
-          : { phone_number: formattedData.phone_number }),
+          : { phone: formattedData.phone_number }),
         password: formData.password,
       });
 

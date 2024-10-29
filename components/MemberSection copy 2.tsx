@@ -49,28 +49,6 @@ const parseErrorMessage = (error: unknown): string => {
   return 'An unexpected error occurred';
 };
 
-const formatDateForInput = (dateString: string | null | undefined): string => {
-  if (!dateString) return '';
-  try {
-    // Convert to YYYY-MM-DD format
-    return dateString.split('T')[0];
-  } catch (error) {
-    console.error('Date formatting error:', error);
-    return '';
-  }
-};
-
-const formatDateForAPI = (dateString: string): string => {
-  if (!dateString) return '';
-  try {
-    // Ensure the date is in ISO format for the API
-    return new Date(dateString).toISOString();
-  } catch (error) {
-    console.error('Date formatting error:', error);
-    return '';
-  }
-};
-
 // Type definitions
 type MemberRole = 'socio' | 'presidente' | 'tesorero' | 'secretario';
 type DocumentType = 'DNI' | 'CE';
@@ -161,7 +139,7 @@ function MembersList({
                 <TableCell>
                   {member.document_type}: {member.document_number}
                 </TableCell>
-                <TableCell>{formatDateForInput(member.join_date)}</TableCell>
+                <TableCell>{member.join_date}</TableCell>
                 <TableCell>{member.role}</TableCell>
                 <TableCell>{member.phone}</TableCell>
                 <TableCell>{member.status}</TableCell>
@@ -183,16 +161,6 @@ function MembersList({
                 </TableCell>
               </TableRow>
             ))}
-            {members.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={8}
-                  className='text-center py-4 text-muted-foreground'
-                >
-                  No hay miembros registrados
-                </TableCell>
-              </TableRow>
-            )}
           </TableBody>
         </Table>
       </CardContent>
@@ -200,95 +168,60 @@ function MembersList({
   );
 }
 
-const defaultFormValues: NewMemberForm = {
-  full_name: '',
-  document_type: 'DNI',
-  document_number: '',
-  role: 'socio',
-  productive_activity: '',
-  birth_date: '',
-  phone: '',
-  address: '',
-  join_date: new Date().toISOString().split('T')[0],
-  gender: 'Masculino',
-  password: '',
-  additional_info: '',
-  beneficiary: {
+const MemberSection = ({ juntaId }: { juntaId: string }) => {
+  const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const [newMember, setNewMember] = useState<NewMemberForm>({
     full_name: '',
     document_type: 'DNI',
     document_number: '',
+    role: 'socio',
+    productive_activity: '',
+    birth_date: '',
     phone: '',
     address: '',
-  },
-};
+    join_date: new Date().toISOString().split('T')[0],
+    gender: 'Masculino',
+    password: '',
+    additional_info: '',
+    beneficiary: {
+      full_name: '',
+      document_type: 'DNI',
+      document_number: '',
+      phone: '',
+      address: '',
+    },
+  });
 
-const MemberSection = ({ juntaId }: { juntaId: string }) => {
-  const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
-  const [members, setMembers] = useState<Member[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
-  const [newMember, setNewMember] = useState<NewMemberForm>(defaultFormValues);
-
-  const handleGetMembers = async () => {
-    if (!juntaId) return;
-
-    setIsLoading(true);
-    try {
-      const response = await api.get<Member[]>(`members/junta/${juntaId}`);
-      setMembers(Array.isArray(response) ? response : []);
-    } catch (error) {
-      console.error('Error fetching members:', error);
-      toast({
-        title: 'Error',
-        description: 'Error al cargar la lista de miembros',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCreateMember = async () => {
-    setIsLoading(true);
-    try {
-      // Format dates for API
-      const formattedData = {
-        ...newMember,
-        birth_date: formatDateForAPI(newMember.birth_date),
-        join_date: formatDateForAPI(newMember.join_date),
-      };
-
-      const response = await api.post(
-        `members/${juntaId}/add/${formattedData.document_number}`,
-        formattedData
-      );
-
-      // Refresh the members list
-      await handleGetMembers();
-
-      // Reset form
-      resetForm();
-
-      toast({
-        title: 'Éxito',
-        description: 'Miembro agregado correctamente',
-      });
-    } catch (error: any) {
-      console.error('Error creating member:', error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        'Error al crear miembro';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const handleEditClick = (member: Member) => {
+    setIsEditing(true);
+    setEditingMemberId(member.id);
+    // Populate form with member data
+    setNewMember({
+      full_name: member.full_name,
+      document_type: member.document_type,
+      document_number: member.document_number,
+      role: member.role,
+      productive_activity: member.productive_activity,
+      birth_date: member.birth_date,
+      phone: member.phone,
+      address: member.address,
+      join_date: member.join_date,
+      gender: member.gender,
+      password: member.password,
+      additional_info: member.additional_info,
+      beneficiary: {
+        full_name: member.beneficiary.full_name,
+        document_type: member.beneficiary.document_type,
+        document_number: member.beneficiary.document_number,
+        phone: member.beneficiary.phone,
+        address: member.beneficiary.address,
+      },
+    });
   };
 
   const handleUpdateMember = async (
@@ -297,30 +230,42 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
   ) => {
     setIsLoading(true);
     try {
-      const formattedData = {
-        ...updatedData,
-        birth_date: formatDateForAPI(updatedData.birth_date),
-        join_date: formatDateForAPI(updatedData.join_date),
-      };
-
-      await api.put(`members/${juntaId}/${memberId}`, formattedData);
+      await api.put(`members/${juntaId}/${memberId}`, updatedData);
 
       // Refresh the members list
       await handleGetMembers();
 
-      // Reset form
-      resetForm();
+      // Reset form and editing state
+      setIsEditing(false);
+      setEditingMemberId(null);
+      setNewMember({
+        full_name: '',
+        document_type: 'DNI',
+        document_number: '',
+        role: 'socio',
+        productive_activity: '',
+        birth_date: '',
+        phone: '',
+        address: '',
+        join_date: new Date().toISOString().split('T')[0],
+        gender: 'Masculino',
+        password: '',
+        additional_info: '',
+        beneficiary: {
+          full_name: '',
+          document_type: 'DNI',
+          document_number: '',
+          phone: '',
+          address: '',
+        },
+      });
 
       toast({
         title: 'Éxito',
         description: 'Miembro actualizado correctamente',
       });
-    } catch (error: any) {
-      console.error('Error updating member:', error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        'Error al actualizar miembro';
+    } catch (error) {
+      const errorMessage = parseErrorMessage(error);
       toast({
         title: 'Error',
         description: errorMessage,
@@ -337,129 +282,29 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
     }
   }, [isAuthenticated, juntaId]);
 
-  const resetForm = () => {
-    setIsEditing(false);
-    setEditingMemberId(null);
-    setNewMember(defaultFormValues);
-  };
-
-  // Handle edit button click
-  const handleEditClick = (member: Member) => {
-    try {
-      console.log('Edit clicked for member:', member.id);
-      setIsEditing(true);
-      setEditingMemberId(member.id);
-      setNewMember({
-        full_name: member.full_name || '',
-        document_type: member.document_type || 'DNI',
-        document_number: member.document_number || '',
-        role: member.role || 'socio',
-        productive_activity: member.productive_activity || '',
-        birth_date: formatDateForInput(member.birth_date),
-        phone: member.phone || '',
-        address: member.address || '',
-        join_date: formatDateForInput(member.join_date),
-        gender: member.gender || 'Masculino',
-        password: member.password || '',
-        additional_info: member.additional_info || '',
-        beneficiary: {
-          full_name: member.beneficiary?.full_name || '',
-          document_type: member.beneficiary?.document_type || 'DNI',
-          document_number: member.beneficiary?.document_number || '',
-          phone: member.beneficiary?.phone || '',
-          address: member.beneficiary?.address || '',
-        },
-      });
-    } catch (error) {
-      console.error('Error setting edit mode:', error);
-      toast({
-        title: 'Error',
-        description: 'Error al cargar los datos del miembro',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // const handleSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   console.log(
-  //     '2. Form submitted, isEditing:',
-  //     isEditing,
-  //     'memberId:',
-  //     editingMemberId
-  //   );
-  //   try {
-  //     if (isEditing && editingMemberId) {
-  //       // If editing, call handleUpdateMember
-  //       await handleUpdateMember(editingMemberId, newMember);
-  //     } else {
-  //       // If creating new member, use the existing create logic
-  //       setIsLoading(true);
-  //       const formattedData = {
-  //         ...newMember,
-  //         birth_date: formatDateForAPI(newMember.birth_date),
-  //         join_date: formatDateForAPI(newMember.join_date),
-  //       };
-
-  //       await api.post(`members/${juntaId}/add`, formattedData);
-  //       await handleGetMembers();
-
-  //       toast({
-  //         title: 'Éxito',
-  //         description: 'Miembro agregado correctamente',
-  //       });
-  //       resetForm();
-  //     }
-  //   } catch (error: any) {
-  //     console.error('Error submitting form:', error);
-  //     const errorMessage =
-  //       error.response?.data?.message ||
-  //       error.message ||
-  //       'Error al procesar la solicitud';
-  //     toast({
-  //       title: 'Error',
-  //       description: errorMessage,
-  //       variant: 'destructive',
-  //     });
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log(
-      'Form submitted. IsEditing:',
-      isEditing,
-      'MemberId:',
-      editingMemberId
-    );
-
-    try {
-      if (isEditing && editingMemberId) {
-        // Update existing member
-        await handleUpdateMember(editingMemberId, newMember);
-      } else {
-        // Create new member
-        await handleCreateMember();
-      }
-    } catch (error) {
-      console.error('Error in form submission:', error);
-      toast({
-        title: 'Error',
-        description: 'Error al procesar el formulario',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleDeleteMember = async (memberId: number) => {
-    if (!confirm('¿Está seguro de eliminar este miembro?')) return;
-
+  const handleGetMembers = async () => {
     setIsLoading(true);
     try {
-      await api.delete(`members/${juntaId}/${memberId}`);
+      const response = await api.get<Member[]>(`members/junta/${juntaId}`);
+      setMembers(response);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Error al cargar miembros',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteMember = async (id: number) => {
+    setIsLoading(true);
+    try {
+      await api.delete(`members/${juntaId}/${id}`);
+      // Fetch the updated list instead of updating state directly
       await handleGetMembers();
+
       toast({
         title: 'Éxito',
         description: 'Miembro eliminado correctamente',
@@ -468,13 +313,122 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
       console.error('Error deleting member:', error);
       toast({
         title: 'Error',
-        description: 'Error al eliminar el miembro',
+        description:
+          error instanceof Error ? error.message : 'Error al eliminar miembro',
         variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (isEditing && editingMemberId) {
+      // Handle update
+      await handleUpdateMember(editingMemberId, newMember);
+    } else {
+      // Handle create new member
+      await handleCreateMember();
+    }
+  };
+
+  const handleCreateMember = async () => {
+    setIsLoading(true);
+    try {
+      await api.post(`members/${juntaId}/add`, newMember);
+      await handleGetMembers();
+
+      // Reset form
+      setNewMember({
+        full_name: '',
+        document_type: 'DNI',
+        document_number: '',
+        role: 'socio',
+        productive_activity: '',
+        birth_date: '',
+        phone: '',
+        address: '',
+        join_date: new Date().toISOString().split('T')[0],
+        gender: 'Masculino',
+        password: '',
+        additional_info: '',
+        beneficiary: {
+          full_name: '',
+          document_type: 'DNI',
+          document_number: '',
+          phone: '',
+          address: '',
+        },
+      });
+
+      toast({
+        title: 'Éxito',
+        description: 'Miembro agregado correctamente',
+      });
+    } catch (error) {
+      const errorMessage = parseErrorMessage(error);
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // const handleSubmit_ = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setIsLoading(true);
+
+  //   try {
+  //     const response = await api.post(
+  //       `members/${juntaId}/add/${newMember.document_number}`,
+  //       newMember
+  //     );
+  //     await handleGetMembers();
+  //     console.log('Add member response:', response);
+  //     toast({
+  //       title: 'Éxito',
+  //       description: 'Miembro agregado correctamente',
+  //     });
+  //     // Reset form
+  //     setNewMember({
+  //       full_name: '',
+  //       document_type: 'DNI',
+  //       document_number: '',
+  //       role: 'socio',
+  //       productive_activity: '',
+  //       birth_date: '',
+  //       phone: '',
+  //       address: '',
+  //       join_date: new Date().toISOString().split('T')[0],
+  //       gender: 'Masculino',
+  //       password: '',
+  //       additional_info: '',
+  //       beneficiary: {
+  //         full_name: '',
+  //         document_type: 'DNI',
+  //         document_number: '',
+  //         phone: '',
+  //         address: '',
+  //       },
+  //     });
+  //   } catch (error) {
+  //     console.log('error: ', error);
+  //     const parsedError = parseErrorMessage(error);
+  //     console.log('parsedError: ', parsedError);
+  //     toast({
+  //       title: 'Error',
+  //       description: parsedError,
+  //       variant: 'destructive',
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   if (!isAuthenticated) {
     return (
@@ -585,13 +539,12 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
                   <Input
                     id='birth_date'
                     type='date'
-                    value={formatDateForInput(newMember.birth_date)}
+                    value={newMember.birth_date}
                     onChange={(e) =>
                       setNewMember({ ...newMember, birth_date: e.target.value })
                     }
                   />
                 </div>
-
                 <div>
                   <Label htmlFor='phone'>Celular</Label>
                   <Input
@@ -617,7 +570,7 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
                   <Input
                     id='join_date'
                     type='date'
-                    value={formatDateForInput(newMember.join_date)}
+                    value={newMember.join_date}
                     onChange={(e) =>
                       setNewMember({ ...newMember, join_date: e.target.value })
                     }
@@ -773,7 +726,32 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
                 <Button
                   type='button'
                   variant='outline'
-                  onClick={resetForm}
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditingMemberId(null);
+                    // Reset form
+                    setNewMember({
+                      full_name: '',
+                      document_type: 'DNI',
+                      document_number: '',
+                      role: 'socio',
+                      productive_activity: '',
+                      birth_date: '',
+                      phone: '',
+                      address: '',
+                      join_date: new Date().toISOString().split('T')[0],
+                      gender: 'Masculino',
+                      password: '',
+                      additional_info: '',
+                      beneficiary: {
+                        full_name: '',
+                        document_type: 'DNI',
+                        document_number: '',
+                        phone: '',
+                        address: '',
+                      },
+                    });
+                  }}
                 >
                   Cancelar
                 </Button>

@@ -76,7 +76,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
     { value: 'multas', label: 'Multas', icon: AlertTriangle },
     { value: 'acciones', label: 'Acciones', icon: TrendingUp },
     { value: 'pagos', label: 'Pagos', icon: CreditCard },
-    { value: 'agenda', label: 'Agenda', icon: Calendar },
+    // { value: 'agenda', label: 'Agenda', icon: Calendar },
     { value: 'config', label: 'Configuración', icon: WrenchIcon },
   ];
 
@@ -144,9 +144,9 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
                 <TabsContent value='pagos'>
                   <PagosSection juntaId={params.id} />
                 </TabsContent>
-                <TabsContent value='agenda'>
+                {/* <TabsContent value='agenda'>
                   <AgendaSection juntaId={params.id} />
-                </TabsContent>
+                </TabsContent> */}
                 <TabsContent value='config'>
                   <Ajustes />
                 </TabsContent>

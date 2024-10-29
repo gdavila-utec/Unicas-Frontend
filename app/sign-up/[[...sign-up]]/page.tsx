@@ -139,13 +139,6 @@ export default function SignUpPage() {
 
         <div className='text-center text-sm'>
           <Link
-            href='/sign-up/admin'
-            className='text-blue-600 hover:text-blue-500'
-          >
-            Registro de Administrador
-          </Link>
-          <span className='mx-2'>|</span>
-          <Link
             href='/sign-in'
             className='text-blue-600 hover:text-blue-500'
           >

@@ -22,6 +22,7 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/utils/api';
+import { useCallback } from 'react';
 
 interface Member {
   id: number;
@@ -29,6 +30,18 @@ interface Member {
   document_type: string;
   document_number: string;
   shares: number;
+}
+
+interface NewMemberForm {
+  first_name: string;
+  last_name: string;
+  document_type: 'DNI' | 'CE';
+  document_number: string;
+  birth_date: string;
+  province: string;
+  district: string;
+  address: string;
+  is_superuser: boolean;
 }
 
 function MembersList({
@@ -56,25 +69,34 @@ function MembersList({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {members.length > 0 &&
-              members.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>{member.full_name}</TableCell>
-                  <TableCell>
-                    {member.document_type}: {member.document_number}
-                  </TableCell>
-                  <TableCell>{member.shares}</TableCell>
-                  <TableCell>
-                    <Button
-                      onClick={() => onDelete(member.id)}
-                      variant='outline'
-                      size='sm'
-                    >
-                      <Trash2Icon className='h-4 w-4' />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+            {members.map((member) => (
+              <TableRow key={member.id}>
+                <TableCell>{member.full_name}</TableCell>
+                <TableCell>
+                  {member.document_type}: {member.document_number}
+                </TableCell>
+                <TableCell>{member.shares}</TableCell>
+                <TableCell>
+                  <Button
+                    onClick={() => onDelete(member.id)}
+                    variant='outline'
+                    size='sm'
+                  >
+                    <Trash2Icon className='h-4 w-4' />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {members.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  className='text-center text-muted-foreground'
+                >
+                  No hay socios registrados
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </CardContent>
@@ -84,10 +106,10 @@ function MembersList({
 
 const MemberSection = ({ juntaId }: { juntaId: string }) => {
   const { toast } = useToast();
-  const [newMember, setNewMember] = useState({
+  const [newMember, setNewMember] = useState<NewMemberForm>({
     first_name: '',
     last_name: '',
-    document_type: 'DNI' as 'DNI' | 'CE',
+    document_type: 'DNI',
     document_number: '',
     birth_date: '',
     province: '',
@@ -97,44 +119,133 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
   });
 
   const [members, setMembers] = useState<Member[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const { isAdmin, isAuthenticated } = useAuth();
 
-  const handleAddMember = async () => {
+  const handleGetMembers = useCallback(async () => {
+    if (!isAuthenticated || !juntaId) return;
+
+    setIsLoading(true);
     try {
-      const data = await api.post<Member>(
-        `members/${juntaId}/add/${newMember.document_number}`
+      const response = await api.get<Member[]>(`members/junta/${juntaId}`);
+      console.log('Fetched members:', response);
+      if (Array.isArray(response)) {
+        setMembers(response);
+      } else {
+        console.error('Invalid response format:', response);
+        toast({
+          title: 'Error',
+          description: 'Formato de respuesta inválido',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching members:', error);
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error al cargar miembros',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, juntaId, toast]);
+
+  useEffect(() => {
+    handleGetMembers();
+  }, [handleGetMembers]);
+
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    if (
+      !newMember.first_name ||
+      !newMember.last_name ||
+      !newMember.document_number
+    ) {
+      toast({
+        title: 'Error',
+        description: 'Por favor complete los campos requeridos',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const memberData = {
+        ...newMember,
+        full_name: `${newMember.first_name} ${newMember.last_name}`,
+      };
+
+      console.log('Sending member data:', memberData);
+
+      const response = await api.post<Member>(
+        `members/${juntaId}/add/${newMember.document_number}`,
+        memberData
       );
 
-      setMembers([...members, data]);
-      toast({
-        title: 'Éxito',
-        description: 'Miembro agregado correctamente',
-      });
+      console.log('Add member response:', response);
+
+      if (response && response.id) {
+        // Fetch the updated list instead of updating state directly
+        await handleGetMembers();
+
+        setNewMember({
+          first_name: '',
+          last_name: '',
+          document_type: 'DNI',
+          document_number: '',
+          birth_date: '',
+          province: '',
+          district: '',
+          address: '',
+          is_superuser: false,
+        });
+
+        toast({
+          title: 'Éxito',
+          description: 'Miembro agregado correctamente',
+        });
+      } else {
+        throw new Error('Respuesta inválida del servidor');
+      }
     } catch (error) {
+      console.error('Error adding member:', error);
       toast({
         title: 'Error',
         description:
           error instanceof Error ? error.message : 'Error al agregar miembro',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDeleteMember = async (id: number) => {
+    setIsLoading(true);
     try {
       await api.delete(`members/${juntaId}/${id}`);
-      setMembers(members.filter((member) => member.id !== id));
+      // Fetch the updated list instead of updating state directly
+      await handleGetMembers();
+
       toast({
         title: 'Éxito',
         description: 'Miembro eliminado correctamente',
       });
     } catch (error) {
+      console.error('Error deleting member:', error);
       toast({
         title: 'Error',
         description:
           error instanceof Error ? error.message : 'Error al eliminar miembro',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -142,17 +253,18 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
     member: Member,
     updatedMember: Partial<Member>
   ) => {
+    setIsLoading(true);
     try {
-      const data = await api.put<Member>(
-        `members/${juntaId}/${member.id}`,
-        updatedMember
-      );
-      setMembers(members.map((m) => (m.id === member.id ? data : m)));
+      await api.put<Member>(`members/${juntaId}/${member.id}`, updatedMember);
+      // Fetch the updated list instead of updating state directly
+      await handleGetMembers();
+
       toast({
         title: 'Éxito',
         description: 'Miembro actualizado correctamente',
       });
     } catch (error) {
+      console.error('Error updating member:', error);
       toast({
         title: 'Error',
         description:
@@ -161,67 +273,66 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
             : 'Error al actualizar miembro',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleGetMembers = async () => {
-    try {
-      const data = await api.get<Member[]>(`members/junta/${juntaId}`);
-      setMembers(data);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description:
-          error instanceof Error ? error.message : 'Error al cargar miembros',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      handleGetMembers();
-    }
-  }, [isAuthenticated, juntaId]);
+  if (!isAuthenticated) {
+    return (
+      <Card>
+        <CardContent className='py-4'>
+          <p className='text-center text-muted-foreground'>
+            Por favor inicie sesión para ver esta sección
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className='flex flex-col gap-2'>
+    <div className='flex flex-col gap-4'>
       <Card>
         <CardHeader>
           <CardTitle>Agregar Miembro</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className='space-y-4'>
+          <form
+            onSubmit={handleAddMember}
+            className='space-y-4'
+          >
             <div className='grid grid-cols-2 gap-4'>
               <div>
-                <Label htmlFor='firt_name'>Nombres</Label>
+                <Label htmlFor='first_name'>Nombres*</Label>
                 <Input
-                  id='firt_name'
+                  id='first_name'
                   value={newMember.first_name}
                   onChange={(e) =>
                     setNewMember({ ...newMember, first_name: e.target.value })
                   }
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor='last_name'>Apellidos</Label>
+                <Label htmlFor='last_name'>Apellidos*</Label>
                 <Input
                   id='last_name'
                   value={newMember.last_name}
                   onChange={(e) =>
                     setNewMember({ ...newMember, last_name: e.target.value })
                   }
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor='documentType'>Tipo de Documento</Label>
+                <Label htmlFor='document_type'>Tipo de Documento*</Label>
                 <Select
                   value={newMember.document_type}
                   onValueChange={(value: 'DNI' | 'CE') =>
                     setNewMember({ ...newMember, document_type: value })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id='document_type'>
                     <SelectValue placeholder='Seleccionar tipo' />
                   </SelectTrigger>
                   <SelectContent>
@@ -231,9 +342,9 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
                 </Select>
               </div>
               <div>
-                <Label htmlFor='documentNumber'>Número de Documento</Label>
+                <Label htmlFor='document_number'>Número de Documento*</Label>
                 <Input
-                  id='documentNumber'
+                  id='document_number'
                   value={newMember.document_number}
                   onChange={(e) =>
                     setNewMember({
@@ -241,12 +352,13 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
                       document_number: e.target.value,
                     })
                   }
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor='birthDate'>Fecha de Nacimiento</Label>
+                <Label htmlFor='birth_date'>Fecha de Nacimiento</Label>
                 <Input
-                  id='birthDate'
+                  id='birth_date'
                   type='date'
                   value={newMember.birth_date}
                   onChange={(e) =>
@@ -286,7 +398,7 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
               </div>
               <div className='col-span-2 flex items-center space-x-2'>
                 <Input
-                  id='isAdmin'
+                  id='is_superuser'
                   type='checkbox'
                   checked={newMember.is_superuser}
                   onChange={(e) =>
@@ -298,18 +410,19 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
                   className='h-4 w-4'
                 />
                 <Label
-                  htmlFor='isAdmin'
+                  htmlFor='is_superuser'
                   className='text-sm'
                 >
                   Es Administrador
                 </Label>
               </div>
             </div>
+            {/* <Button type='submit'>Agregar Miembro</Button> */}
             <Button
-              type='button'
-              onClick={handleAddMember}
+              type='submit'
+              disabled={isLoading}
             >
-              Agregar Miembro
+              {isLoading ? 'Procesando...' : 'Agregar Miembro'}
             </Button>
           </form>
         </CardContent>

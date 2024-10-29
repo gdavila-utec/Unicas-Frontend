@@ -1,12 +1,10 @@
 'use client';
 import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 
 import { JuntaCard } from '@/components/JuntaCard';
-import GestionUsuarios from '@/components/GestionUsuarios';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Junta } from '@/types/junta';
 
 const EmptyJuntasMessage = () => (
@@ -79,13 +77,6 @@ const AdminView: React.FC<AdminViewProps> = ({
               <EmptyJuntasMessage />
             )}
           </div>
-        </TabsContent>
-
-        <TabsContent
-          value='usuarios'
-          className=''
-        >
-          <GestionUsuarios />
         </TabsContent>
 
         <TabsContent

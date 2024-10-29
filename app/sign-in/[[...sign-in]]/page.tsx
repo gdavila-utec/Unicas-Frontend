@@ -134,7 +134,7 @@ export default function SignInPage() {
         </CardHeader>
 
         <CardContent>
-          <div className='flex justify-center space-x-4 mb-6'>
+          {/* <div className='flex justify-center space-x-4 mb-6'>
             <Button
               type='button'
               variant={loginMethod === 'email' ? 'default' : 'outline'}
@@ -151,7 +151,7 @@ export default function SignInPage() {
             >
               Teléfono
             </Button>
-          </div>
+          </div> */}
 
           <form
             className='space-y-4'

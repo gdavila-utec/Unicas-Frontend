@@ -1,22 +1,12 @@
 {
 	"files": [
 		{
-			"path": "app/sign-in/[[...sign-in]]/page.tsx",
+			"path": "app/juntas/[id]/page.tsx",
 			"bookmarks": [
 				{
-					"line": 30,
-					"column": 0,
-					"label": "formData log"
-				}
-			]
-		},
-		{
-			"path": "middleware.ts",
-			"bookmarks": [
-				{
-					"line": 24,
-					"column": 57,
-					"label": "redirect log"
+					"line": 89,
+					"column": 37,
+					"label": ""
 				}
 			]
 		}

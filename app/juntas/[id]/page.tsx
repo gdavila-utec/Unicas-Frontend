@@ -10,9 +10,8 @@ import {
   AlertTriangle,
   TrendingUp,
   CreditCard,
-  Briefcase,
   Calendar,
-  ChevronsLeftRight,
+  WrenchIcon,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -78,7 +77,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
     { value: 'acciones', label: 'Acciones', icon: TrendingUp },
     { value: 'pagos', label: 'Pagos', icon: CreditCard },
     { value: 'agenda', label: 'Agenda', icon: Calendar },
-    { value: 'config', label: 'Configuración', icon: ChevronsLeftRight },
+    { value: 'config', label: 'Configuración', icon: WrenchIcon },
   ];
 
   return (

@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, LogOut, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import AdminView from '@/components/AdminView';
 import {
   AlertDialog,
@@ -276,14 +276,15 @@ const Home: React.FC = () => {
                   <GestionUsuarios />
                 </div>
               ) : (
-                <AdminView
-                  juntas={juntas}
-                  loading={loading}
-                  onSelectJunta={(junta) => router.push(`/juntas/${junta.id}`)}
-                  onDeleteJunta={(juntaId) => setDeleteJuntaId(juntaId)}
-                  onJuntaAdded={handleGetJuntas}
-                />
+                <div></div>
               )}
+              <AdminView
+                juntas={juntas}
+                loading={loading}
+                onSelectJunta={(junta) => router.push(`/juntas/${junta.id}`)}
+                onDeleteJunta={(juntaId) => setDeleteJuntaId(juntaId)}
+                onJuntaAdded={handleGetJuntas}
+              />
             </CardContent>
           </Card>
         )}

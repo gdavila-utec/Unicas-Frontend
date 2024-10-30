@@ -24,12 +24,19 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/utils/api';
 import { useError } from '@/hooks/useError';
+import {
+  Member,
+  NewMemberForm,
+  DocumentType,
+  MemberRole,
+  Gender,
+} from '@/types';
 
 const formatDateForInput = (dateString: string | null | undefined): string => {
   if (!dateString) return '';
   try {
-    // Convert to YYYY-MM-DD format
-    return dateString.split('T')[0];
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
   } catch (error) {
     console.error('Date formatting error:', error);
     return '';
@@ -39,67 +46,13 @@ const formatDateForInput = (dateString: string | null | undefined): string => {
 const formatDateForAPI = (dateString: string): string => {
   if (!dateString) return '';
   try {
-    // Ensure the date is in ISO format for the API
-    return new Date(dateString).toISOString();
+    const date = new Date(dateString);
+    return date.toISOString();
   } catch (error) {
     console.error('Date formatting error:', error);
     return '';
   }
 };
-
-// Type definitions
-type MemberRole = 'socio' | 'presidente' | 'tesorero' | 'secretario';
-type DocumentType = 'DNI' | 'CE';
-type Gender = 'Masculino' | 'Femenino' | 'Otro';
-type Status = 'Activo' | 'Inactivo';
-
-interface Beneficiary {
-  full_name: string;
-  document_type: DocumentType;
-  document_number: string;
-  phone: string;
-  address: string;
-}
-
-interface Member {
-  id: number;
-  full_name: string;
-  document_type: DocumentType;
-  document_number: string;
-  role: MemberRole;
-  productive_activity: string;
-  birth_date: string;
-  phone: string;
-  address: string;
-  join_date: string;
-  gender: Gender;
-  password: string;
-  additional_info: string;
-  status: Status;
-  beneficiary: Beneficiary;
-}
-
-interface NewMemberForm {
-  full_name: string;
-  document_type: DocumentType;
-  document_number: string;
-  role: MemberRole;
-  productive_activity: string;
-  birth_date: string;
-  phone: string;
-  address: string;
-  join_date: string;
-  gender: Gender;
-  password: string;
-  additional_info: string;
-  beneficiary: {
-    full_name: string;
-    document_type: DocumentType;
-    document_number: string;
-    phone: string;
-    address: string;
-  };
-}
 
 function MembersList({
   members,
@@ -108,7 +61,7 @@ function MembersList({
 }: {
   members: Member[];
   onEdit: (member: Member) => void;
-  onDelete: (memberId: number) => void;
+  onDelete: (memberId: string) => void;
 }) {
   return (
     <Card>
@@ -177,6 +130,7 @@ function MembersList({
 }
 
 const defaultFormValues: NewMemberForm = {
+  id: '',
   full_name: '',
   document_type: 'DNI',
   document_number: '',
@@ -204,10 +158,90 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [newMember, setNewMember] = useState<NewMemberForm>(defaultFormValues);
   const { perro, setError } = useError();
 
+  useEffect(() => {
+    if (isEditing && editingMemberId) {
+      const currentMember = members.find((m) => m.id === editingMemberId);
+      if (currentMember) {
+        const editableMember = {
+          ...currentMember,
+          birth_date: formatDateForInput(currentMember.birth_date),
+          join_date: formatDateForInput(currentMember.join_date),
+          beneficiary: currentMember.beneficiary || {
+            full_name: '',
+            document_type: 'DNI',
+            document_number: '',
+            phone: '',
+            address: '',
+          },
+        };
+        setNewMember(editableMember);
+      }
+    }
+  }, [isEditing, editingMemberId, members]);
+
+  const handleEditClick = (member: Member) => {
+    try {
+      setIsEditing(true);
+      setEditingMemberId(member.id);
+
+      // Create a properly formatted member object for editing
+      const editableMember: NewMemberForm = {
+        id: member.id,
+        full_name: member.full_name || '',
+        document_type: member.document_type || 'DNI',
+        document_number: member.document_number || '',
+        role: member.role || 'socio',
+        productive_activity: member.productive_activity || '',
+        birth_date: member.birth_date
+          ? formatDateForInput(member.birth_date)
+          : '',
+        phone: member.phone || '',
+        address: member.address || '',
+        join_date: member.join_date ? formatDateForInput(member.join_date) : '',
+        gender: member.gender || 'Masculino',
+        password: '', // Don't populate password for security
+        additional_info: member.additional_info || '',
+        beneficiary: {
+          full_name: member.beneficiary?.full_name || '',
+          document_type: member.beneficiary?.document_type || 'DNI',
+          document_number: member.beneficiary?.document_number || '',
+          phone: member.beneficiary?.phone || '',
+          address: member.beneficiary?.address || '',
+        },
+      };
+
+      // Use setState callback to ensure state is updated
+      setNewMember(editableMember);
+      // Force a re-render by updating a timestamp
+      setLastUpdate(Date.now());
+    } catch (error) {
+      console.error('Error setting edit mode:', error);
+      toast({
+        title: 'Error',
+        description: 'Error al cargar los datos del miembro',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Add a state for forcing re-renders
+  const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
+
+  // Add an effect to handle form updates
+  useEffect(() => {
+    if (isEditing && editingMemberId) {
+      const member = members.find((m) => m.id === editingMemberId);
+      if (member) {
+        console.log('Updating form with member data:', member);
+      }
+    }
+  }, [isEditing, editingMemberId, lastUpdate]);
+
+  // ... (rest of the component remains the same)
   const handleGetMembers = async () => {
     if (!juntaId) return;
 
@@ -254,12 +288,10 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
         title: 'Éxito',
         description: 'Miembro agregado correctamente',
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating member:', error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        'Error al crear miembro';
+      setError(error);
+      const errorMessage = perro || 'Error al agregar miembro';
       toast({
         title: 'Error',
         description: errorMessage,
@@ -271,7 +303,7 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
   };
 
   const handleUpdateMember = async (
-    memberId: number,
+    memberId: string,
     updatedData: NewMemberForm
   ) => {
     setIsLoading(true);
@@ -283,23 +315,16 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
       };
 
       await api.put(`members/${juntaId}/${memberId}`, formattedData);
-
-      // Refresh the members list
       await handleGetMembers();
-
-      // Reset form
       resetForm();
-
       toast({
         title: 'Éxito',
         description: 'Miembro actualizado correctamente',
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating member:', error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        'Error al actualizar miembro';
+      setError(error);
+      const errorMessage = perro || 'Error al actualizar miembro';
       toast({
         title: 'Error',
         description: errorMessage,
@@ -322,104 +347,12 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
     setNewMember(defaultFormValues);
   };
 
-  // Handle edit button click
-  const handleEditClick = (member: Member) => {
-    try {
-      console.log('Edit clicked for member:', member.id);
-      setIsEditing(true);
-      setEditingMemberId(member.id);
-      setNewMember({
-        full_name: member.full_name || '',
-        document_type: member.document_type || 'DNI',
-        document_number: member.document_number || '',
-        role: member.role || 'socio',
-        productive_activity: member.productive_activity || '',
-        birth_date: formatDateForInput(member.birth_date),
-        phone: member.phone || '',
-        address: member.address || '',
-        join_date: formatDateForInput(member.join_date),
-        gender: member.gender || 'Masculino',
-        password: member.password || '',
-        additional_info: member.additional_info || '',
-        beneficiary: {
-          full_name: member.beneficiary?.full_name || '',
-          document_type: member.beneficiary?.document_type || 'DNI',
-          document_number: member.beneficiary?.document_number || '',
-          phone: member.beneficiary?.phone || '',
-          address: member.beneficiary?.address || '',
-        },
-      });
-    } catch (error) {
-      console.error('Error setting edit mode:', error);
-      toast({
-        title: 'Error',
-        description: 'Error al cargar los datos del miembro',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // const handleSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   console.log(
-  //     '2. Form submitted, isEditing:',
-  //     isEditing,
-  //     'memberId:',
-  //     editingMemberId
-  //   );
-  //   try {
-  //     if (isEditing && editingMemberId) {
-  //       // If editing, call handleUpdateMember
-  //       await handleUpdateMember(editingMemberId, newMember);
-  //     } else {
-  //       // If creating new member, use the existing create logic
-  //       setIsLoading(true);
-  //       const formattedData = {
-  //         ...newMember,
-  //         birth_date: formatDateForAPI(newMember.birth_date),
-  //         join_date: formatDateForAPI(newMember.join_date),
-  //       };
-
-  //       await api.post(`members/${juntaId}/add`, formattedData);
-  //       await handleGetMembers();
-
-  //       toast({
-  //         title: 'Éxito',
-  //         description: 'Miembro agregado correctamente',
-  //       });
-  //       resetForm();
-  //     }
-  //   } catch (error: any) {
-  //     console.error('Error submitting form:', error);
-  //     const errorMessage =
-  //       error.response?.data?.message ||
-  //       error.message ||
-  //       'Error al procesar la solicitud';
-  //     toast({
-  //       title: 'Error',
-  //       description: errorMessage,
-  //       variant: 'destructive',
-  //     });
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(
-      'Form submitted. IsEditing:',
-      isEditing,
-      'MemberId:',
-      editingMemberId
-    );
-
     try {
-      if (isEditing && editingMemberId) {
-        // Update existing member
+      if (isEditing && editingMemberId !== null) {
         await handleUpdateMember(editingMemberId, newMember);
       } else {
-        // Create new member
         await handleCreateMember();
       }
     } catch (error) {
@@ -432,7 +365,7 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
     }
   };
 
-  const handleDeleteMember = async (memberId: number) => {
+  const handleDeleteMember = async (memberId: string) => {
     if (!confirm('¿Está seguro de eliminar este miembro?')) return;
 
     setIsLoading(true);
@@ -498,9 +431,9 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
                   <Label htmlFor='document_type'>Tipo de Documento</Label>
                   <Select
                     value={newMember.document_type}
-                    onValueChange={(value: DocumentType) =>
-                      setNewMember({ ...newMember, document_type: value })
-                    }
+                    onValueChange={(value: DocumentType) => {
+                      setNewMember({ ...newMember, document_type: value });
+                    }}
                   >
                     <SelectTrigger id='document_type'>
                       <SelectValue />

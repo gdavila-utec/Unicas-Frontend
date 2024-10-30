@@ -11,7 +11,7 @@ import {
   TrendingUp,
   CreditCard,
   Calendar,
-  WrenchIcon,
+  Settings,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ import PrestamosSection from '@/components/PrestamosSection';
 import MultaSection from '@/components/MultasSection';
 import AcccionesSection from '@/components/AccionesSection';
 import PagosSection from '@/components/PagosSection';
-import AgendaSection from '@/components/AgendaSection';
+// import AgendaSection from '@/components/AgendaSection';
 import { Ajustes } from '@/components/Ajustes';
 import { api } from '@/utils/api';
 
@@ -77,7 +77,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
     { value: 'acciones', label: 'Acciones', icon: TrendingUp },
     { value: 'pagos', label: 'Pagos', icon: CreditCard },
     // { value: 'agenda', label: 'Agenda', icon: Calendar },
-    { value: 'config', label: 'Configuración', icon: WrenchIcon },
+    { value: 'config', label: '', icon: Settings },
   ];
 
   return (

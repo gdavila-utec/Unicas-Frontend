@@ -1,4 +1,3 @@
-// components/Ajustes.tsx
 'use client';
 
 import React from 'react';
@@ -15,14 +14,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarIcon } from 'lucide-react';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
+
 import {
   Form,
   FormControl,
@@ -31,10 +23,12 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { useBoardConfig } from '@/store/configValues';
+import DaySelect from '@/components/ui/dayselect';
 
 const settingsFormSchema = z.object({
-  fecha_asamblea: z.date({
-    required_error: 'Fecha de asamblea es requerida',
+  fecha_asamblea: z.number({
+    required_error: 'Por favor seleccione un día',
   }),
   porcentaje_intereses: z.string().min(1, 'Porcentaje es requerido'),
   valor_multa_inasistencia: z.string().min(1, 'Valor es requerido'),
@@ -48,23 +42,46 @@ type SettingsFormValues = z.infer<typeof settingsFormSchema>;
 
 export const Ajustes = () => {
   const { toast } = useToast();
+  const {
+    meetingDate,
+    monthlyInterestRate,
+    absenceFee,
+    loanFormValue,
+    shareValue,
+    latePaymentFee,
+    defaultInterestRate,
+    setMeetingDate,
+    setMonthlyInterestRate,
+    setAbsenceFee,
+    setLoanFormValue,
+    setShareValue,
+    setLatePaymentFee,
+    setDefaultInterestRate,
+  } = useBoardConfig();
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsFormSchema),
     defaultValues: {
-      fecha_asamblea: new Date(),
-      porcentaje_intereses: '',
-      valor_multa_inasistencia: '',
-      valor_formulario_prestamo: '',
-      valor_accion: '',
-      valor_multa_tardanza: '',
-      porcentaje_mora: '',
+      fecha_asamblea: meetingDate,
+      porcentaje_intereses: monthlyInterestRate.toString(),
+      valor_multa_inasistencia: absenceFee.toString(),
+      valor_formulario_prestamo: loanFormValue.toString(),
+      valor_accion: shareValue.toString(),
+      valor_multa_tardanza: latePaymentFee.toString(),
+      porcentaje_mora: defaultInterestRate.toString(),
     },
   });
 
   const onSubmit = async (data: SettingsFormValues) => {
     try {
-      // API call here
+      setMeetingDate(data.fecha_asamblea);
+      setMonthlyInterestRate(Number(data.porcentaje_intereses));
+      setAbsenceFee(Number(data.valor_multa_inasistencia));
+      setLoanFormValue(Number(data.valor_formulario_prestamo));
+      setShareValue(Number(data.valor_accion));
+      setLatePaymentFee(Number(data.valor_multa_tardanza));
+      setDefaultInterestRate(Number(data.porcentaje_mora));
+
       toast({
         title: 'Ajustes guardados',
         description: 'Los ajustes han sido actualizados exitosamente.',
@@ -99,37 +116,16 @@ export const Ajustes = () => {
                 name='fecha_asamblea'
                 render={({ field }) => (
                   <FormItem className='flex flex-col'>
-                    <FormLabel>Fecha de asamblea</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant='outline'
-                            className={`w-full justify-start text-left font-normal ${
-                              !field.value && 'text-muted-foreground'
-                            }`}
-                          >
-                            {field.value ? (
-                              format(field.value, 'dd/MM/yyyy')
-                            ) : (
-                              <span>Seleccionar fecha</span>
-                            )}
-                            <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className='w-auto p-0'
-                        align='start'
-                      >
-                        <Calendar
-                          mode='single'
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    {/* <FormLabel>Dia de asamblea</FormLabel> */}
+
+                    <FormControl>
+                      <FormField
+                        control={form.control}
+                        name='fecha_asamblea'
+                        render={({ field }) => <DaySelect field={field} />}
+                      />
+                    </FormControl>
+
                     <FormMessage />
                   </FormItem>
                 )}

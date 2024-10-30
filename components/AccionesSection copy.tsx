@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import {
@@ -33,67 +34,65 @@ import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useError } from '@/hooks/useError';
 import { api } from '@/utils/api';
-import { Accion, Member } from '@/types';
-import { useBoardConfig } from '@/store/configValues';
+
+interface Member {
+  id: number;
+  full_name: string;
+}
+
+interface AccionPurchase {
+  id: number;
+  member: string;
+  date: string;
+  quantity: number;
+  value: number;
+  member_name: string;
+}
+
+const formSchema = z.object({
+  member: z.string().min(1, { message: 'Add correct value' }),
+  date: z.date(),
+  quantity: z.number().min(1, { message: 'Quantity must be at least 1' }),
+  value: z.number().min(0, { message: 'Value must be non-negative' }),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface AccionesSectionProps {
   juntaId: string;
 }
 
-const formSchema = z.object({
-  memberId: z.string().min(1, { message: 'Miembro requerido' }),
-  date: z.date(),
-  amount: z.number().min(1, { message: 'La cantidad debe ser mayor a 0' }),
-  description: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
 export default function AccionesSection({ juntaId }: AccionesSectionProps) {
   const { perro, setError } = useError();
-  const [acciones, setAcciones] = useState<Accion[]>([]);
+  const [history, setHistory] = useState<AccionPurchase[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
-  console.log('members: ', members);
   const [loading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const {
-    shareValue,
-    meetingDate,
-    monthlyInterestRate,
-    latePaymentFee,
-    absenceFee,
-    defaultInterestRate,
-    loanFormValue,
-  } = useBoardConfig();
-  console.log('loanFormValue: ', loanFormValue);
-  console.log('defaultInterestRate: ', defaultInterestRate);
-  console.log('absenceFee: ', absenceFee);
-  console.log('latePaymentFee: ', latePaymentFee);
-  console.log('monthlyInterestRate: ', monthlyInterestRate);
-  console.log('meetingDate: ', meetingDate);
-  console.log('shareValue: ', shareValue);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      memberId: '',
+      member: '',
       date: new Date(),
-      amount: 0,
-      description: '',
+      quantity: 0,
+      value: 0,
     },
   });
 
-  const fetchAcciones = async () => {
+  const fetchHistory = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get<Accion[]>(`acciones/junta/${juntaId}`);
-      setAcciones(Array.isArray(response) ? response : []);
+      const response = await api.get<AccionPurchase[]>(
+        `acciones/junta/${juntaId}`
+      );
+      setHistory(Array.isArray(response) ? response : []);
     } catch (error) {
-      console.error('Error fetching acciones:', error);
+      console.error('Error fetching members:', error);
       setError(error);
       toast({
         title: 'Error',
@@ -125,27 +124,27 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
 
   useEffect(() => {
     fetchMembers();
-    fetchAcciones();
+    fetchHistory();
   }, [juntaId]);
 
   const onSubmit = async (values: FormValues) => {
     try {
-      const jsonBody: Partial<Accion> = {
+      const jsonBody = {
         type: 'COMPRA',
-        amount: values.amount,
+        amount: values.quantity,
         description: `Compra de acciones por ${
-          values.amount
+          values.quantity
         } acciones el dia ${format(values.date, 'yyyy-MM-dd')}`,
         juntaId: juntaId,
-        memberId: values.memberId,
+        memberId: values.member,
       };
 
       await api.post('acciones', jsonBody);
-      await fetchAcciones();
+      await fetchHistory();
 
       toast({
         title: 'Success',
-        description: 'Acciones compradas exitosamente',
+        description: 'Acciones purchased successfully',
       });
 
       form.reset();
@@ -160,69 +159,101 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  const handleDeleteAccion = async (accionId: number) => {
+    try {
+      await api.delete(`acciones/${accionId}`);
+      await fetchHistory();
+
+      toast({
+        title: 'Success',
+        description: 'Accion deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting accion:', error);
+      setError(error);
+      toast({
+        title: 'Error',
+        description: perro,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <div className='space-y-8 p-6'>
-      <div>
-        <h1 className='text-2xl font-semibold mb-6'>Comprar Acciones</h1>
-
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className='space-y-6'
-          >
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+    <div className='space-y-8'>
+      <Card>
+        <CardHeader>
+          <CardTitle>Comprar Acciones</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className='space-y-4'
+            >
               <FormField
                 control={form.control}
-                name='memberId'
+                name='member'
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className='text-gray-700'>
-                      Seleccionar Miembro
-                    </FormLabel>
+                    <FormLabel>Miembro</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className='h-10'>
+                        <SelectTrigger>
                           <SelectValue placeholder='Seleccionar miembro' />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {members.map((member) => (
+                        {members.length > 0 ? (
+                          members.map((member) => (
+                            <SelectItem
+                              key={member.id}
+                              value={member.id.toString()}
+                            >
+                              {member.full_name}
+                            </SelectItem>
+                          ))
+                        ) : (
                           <SelectItem
-                            key={member.id}
-                            value={member.id}
+                            value='No hay miembros'
+                            disabled
                           >
-                            {member.full_name ||
-                              member.username ||
-                              'Usuario sin nombre'}
+                            No hay miembros
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name='date'
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className='text-gray-700'>Fecha</FormLabel>
+                  <FormItem className='flex flex-col'>
+                    <FormLabel>Fecha de Movimiento</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
-                            variant='outline'
-                            className='h-10 w-full justify-start text-left font-normal'
+                            variant={'outline'}
+                            className={`w-full pl-3 text-left font-normal ${
+                              !field.value && 'text-muted-foreground'
+                            }`}
                           >
-                            {field.value
-                              ? format(field.value, 'dd/MM/yyyy')
-                              : 'Seleccionar fecha'}
+                            {field.value ? (
+                              format(field.value, 'PPP')
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
                             <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
                           </Button>
                         </FormControl>
@@ -242,18 +273,16 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                         />
                       </PopoverContent>
                     </Popover>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
-                name='amount'
+                name='quantity'
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className='text-gray-700'>
-                      Cantidad de Acciones
-                    </FormLabel>
+                    <FormLabel>Cantidad de Acciones</FormLabel>
                     <FormControl>
                       <Input
                         type='number'
@@ -262,97 +291,80 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                         onChange={(e) =>
                           field.onChange(Number(e.target.value) || 0)
                         }
-                        className='h-10'
                       />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name='amount'
+                name='value'
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className='text-gray-700'>
-                      Valor de Acciones
-                    </FormLabel>
+                    <FormLabel>Valor en Soles</FormLabel>
                     <FormControl>
                       <Input
                         type='number'
                         {...field}
-                        value={shareValue}
-                        className='h-10'
+                        value={field.value || ''}
+                        onChange={(e) =>
+                          field.onChange(Number(e.target.value) || 0)
+                        }
                       />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
+              <Button type='submit'>Comprar Acciones</Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
 
-            <Button
-              type='submit'
-              className='bg-black text-white'
-            >
-              Comprar Acciones
-            </Button>
-          </form>
-        </Form>
-      </div>
-
-      <div>
-        <h2 className='text-xl font-semibold mb-4'>
-          Historial de Compras de Acciones
-        </h2>
-        {acciones.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className='w-12'>N°</TableHead>
-                <TableHead>Nombre completo (socio)</TableHead>
-                <TableHead>Fecha de compra</TableHead>
-                <TableHead>Cantidad (#)</TableHead>
-                <TableHead>Valor Total (S/.)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {acciones.map((accion, index) => (
-                <TableRow key={accion.id}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>
-                    {accion.member.full_name || accion.member.username}
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(accion.createdAt), 'dd/MM/yyyy')}
-                  </TableCell>
-                  <TableCell>{accion.amount}</TableCell>
-                  <TableCell>{accion.amount * shareValue}</TableCell>
+      <Card>
+        <CardHeader>
+          <CardTitle>Historial de Compra de Acciones</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {history.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Miembro</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Cantidad de Acciones</TableHead>
+                  <TableHead>Valor en Soles</TableHead>
+                  <TableHead>Acciones</TableHead>
                 </TableRow>
-              ))}
-              <TableRow>
-                <TableCell
-                  colSpan={3}
-                  className='font-semibold'
-                >
-                  Total
-                </TableCell>
-                <TableCell className='font-semibold'>
-                  {acciones.reduce((sum, accion) => sum + accion.amount, 0)}
-                </TableCell>
-                <TableCell className='font-semibold'>
-                  {acciones.reduce(
-                    (sum, accion) => sum + accion.amount * shareValue,
-                    0
-                  )}
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        ) : (
-          <div className='text-center py-4 text-gray-500'>
-            No hay historial de acciones disponible.
-          </div>
-        )}
-      </div>
+              </TableHeader>
+              <TableBody>
+                {history.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.member_name}</TableCell>
+                    <TableCell>
+                      {/* {format(new Date(item.date), 'dd/MM/yyyy')} */}
+                    </TableCell>
+                    <TableCell>{item.quantity}</TableCell>
+                    <TableCell>S/{item.value}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant='destructive'
+                        onClick={() => handleDeleteAccion(item.id)}
+                      >
+                        Eliminar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div>No hay historial de acciones disponible.</div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

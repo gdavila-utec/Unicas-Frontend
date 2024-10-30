@@ -40,6 +40,11 @@ import * as z from 'zod';
 import { useError } from '@/hooks/useError';
 import { api } from '@/utils/api';
 
+interface Member {
+  id: number;
+  full_name: string;
+}
+
 interface AccionPurchase {
   id: number;
   member: string;
@@ -56,17 +61,20 @@ const formSchema = z.object({
   value: z.number().min(0, { message: 'Value must be non-negative' }),
 });
 
-export default function AccionesSection({ juntaId }: { juntaId: string }) {
-  const { perro, setError } = useError();
+type FormValues = z.infer<typeof formSchema>;
 
+interface AccionesSectionProps {
+  juntaId: string;
+}
+
+export default function AccionesSection({ juntaId }: AccionesSectionProps) {
+  const { perro, setError } = useError();
   const [history, setHistory] = useState<AccionPurchase[]>([]);
-  console.log('history: ', history);
-  const [members, setMembers] = useState<any[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [loading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  console.log('members: ', members);
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       member: '',
@@ -75,11 +83,13 @@ export default function AccionesSection({ juntaId }: { juntaId: string }) {
       value: 0,
     },
   });
+
   const fetchHistory = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get<Member[]>(`acciones/junta/${juntaId}`);
-      console.log('response: ', response);
+      const response = await api.get<AccionPurchase[]>(
+        `acciones/junta/${juntaId}`
+      );
       setHistory(Array.isArray(response) ? response : []);
     } catch (error) {
       console.error('Error fetching members:', error);
@@ -93,6 +103,7 @@ export default function AccionesSection({ juntaId }: { juntaId: string }) {
       setIsLoading(false);
     }
   };
+
   const fetchMembers = async () => {
     setIsLoading(true);
     try {
@@ -116,41 +127,55 @@ export default function AccionesSection({ juntaId }: { juntaId: string }) {
     fetchHistory();
   }, [juntaId]);
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormValues) => {
     try {
-      // const jsonBody = {
-      //   member: values.member,
-      //   date: values.date,
-      //   quantity: values.quantity,
-      //   value: values.value,
-      //   junta: juntaId,
-      // };
       const jsonBody = {
         type: 'COMPRA',
         amount: values.quantity,
-        description: `Compra de acciones por ${values.quantity} acciones el dia ${values.date}`,
+        description: `Compra de acciones por ${
+          values.quantity
+        } acciones el dia ${format(values.date, 'yyyy-MM-dd')}`,
         juntaId: juntaId,
         memberId: values.member,
       };
 
-      const response = await api.post<Member[]>(`acciones`, jsonBody);
-      console.log('response: ', response);
-
+      await api.post('acciones', jsonBody);
       await fetchHistory();
+
+      toast({
+        title: 'Success',
+        description: 'Acciones purchased successfully',
+      });
+
+      form.reset();
     } catch (error) {
       console.error('Error adding accion:', error);
+      setError(error);
+      toast({
+        title: 'Error',
+        description: perro,
+        variant: 'destructive',
+      });
     }
   };
 
   const handleDeleteAccion = async (accionId: number) => {
-    console.log('accionId: ', accionId);
     try {
-      const response = await api.delete<Member[]>(`acciones/${accionId}`);
-      console.log('response: ', response);
-
+      await api.delete(`acciones/${accionId}`);
       await fetchHistory();
+
+      toast({
+        title: 'Success',
+        description: 'Accion deleted successfully',
+      });
     } catch (error) {
       console.error('Error deleting accion:', error);
+      setError(error);
+      toast({
+        title: 'Error',
+        description: perro,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -311,19 +336,23 @@ export default function AccionesSection({ juntaId }: { juntaId: string }) {
                   <TableHead>Fecha</TableHead>
                   <TableHead>Cantidad de Acciones</TableHead>
                   <TableHead>Valor en Soles</TableHead>
+                  <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {history.map((item) => (
                   <TableRow key={item.id}>
-                    {/* <TableCell>{item.quantity}</TableCell> */}
-                    <TableCell>
-                      {/* {format(new Date(item.date), 'yyyy-MM-dd HH:mm:ss')} */}
-                    </TableCell>
                     <TableCell>{item.member_name}</TableCell>
-                    <TableCell>S/{item.quantity}</TableCell>
                     <TableCell>
-                      <Button onClick={() => handleDeleteAccion(item.id)}>
+                      {/* {format(new Date(item.date), 'dd/MM/yyyy')} */}
+                    </TableCell>
+                    <TableCell>{item.quantity}</TableCell>
+                    <TableCell>S/{item.value}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant='destructive'
+                        onClick={() => handleDeleteAccion(item.id)}
+                      >
                         Eliminar
                       </Button>
                     </TableCell>
@@ -332,7 +361,7 @@ export default function AccionesSection({ juntaId }: { juntaId: string }) {
               </TableBody>
             </Table>
           ) : (
-            <div>No acciones history available.</div>
+            <div>No hay historial de acciones disponible.</div>
           )}
         </CardContent>
       </Card>

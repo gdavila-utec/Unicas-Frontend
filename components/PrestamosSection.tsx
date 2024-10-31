@@ -21,6 +21,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
+import { useBoardConfig } from '@/store/configValues';
 
 interface Member {
   id: number;
@@ -56,6 +57,7 @@ interface NuevoPrestamoForm {
 }
 
 const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
+  const { monthlyInterestRate } = useBoardConfig();
   const { toast } = useToast();
   const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -65,7 +67,7 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
       miembro: '',
       fechaSolicitud: '',
       montoSolicitado: 0,
-      interesMensual: 0,
+      interesMensual: monthlyInterestRate,
       cantidadCuotas: 0,
       tipoPrestamo: 'Cuota a rebatir',
     }
@@ -75,11 +77,13 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
     setIsLoading(true);
     try {
       const [membersData, prestamosData] = await Promise.all([
-        api.get<Member[]>(`members/${juntaId}`),
+        api.get<Member[]>(`members/junta/${juntaId}`),
         api.get<Prestamo[]>(`prestamos/junta/${juntaId}`),
       ]);
       setMembers(membersData);
+      console.log('membersData: ', membersData);
       setPrestamos(prestamosData);
+      console.log('prestamosData: ', prestamosData);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({

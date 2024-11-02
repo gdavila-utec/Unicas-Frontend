@@ -17,7 +17,6 @@ export interface Junta {
   share_value: number;
   duration_months: number;
   current_month: number;
-  members: string[];
   available_capital: number;
   base_capital: number;
   createdAt: string;

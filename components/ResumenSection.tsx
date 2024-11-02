@@ -69,7 +69,7 @@ const ResumenSection = ({
   const [multas, setMultas] = useState<Multa[]>([]);
   const [acciones, setAcciones] = useState<Accion[]>([]);
   const [pagos, setPagos] = useState<Pago[]>([]);
-  // const [capital, setCapital] = useState<Capital | null>(null);
+  const [capital, setCapital] = useState<Capital | null>(null);
   const { setJunta, junta } = useJuntaValues();
   console.log('junta resumen: ', junta);
 
@@ -80,6 +80,12 @@ const ResumenSection = ({
     //   reserva_legal: junta?.base_capital,
     //   fondo_social: junta?.available_capital,
     // });
+    const juntaValues = junta as Junta;
+
+    setCapital({
+      reserva_legal: juntaValues.base_capital,
+      fondo_social: juntaValues.available_capital,
+    });
 
     const fetchData = async () => {
       if (!isAuthenticated) {
@@ -273,10 +279,10 @@ const ResumenSection = ({
 
       <div>
         <h3 className='text-xl font-semibold'>Capital Social</h3>
-        {junta ? (
+        {capital ? (
           <>
-            <p>Reserva Legal: S/{junta?.base_capital}</p>
-            <p>Fondo Social: S/.{junta?.available_capital}</p>
+            <p>Reserva Legal: S/{capital.reserva_legal}</p>
+            <p>Fondo Social: S/.{capital.fondo_social}</p>
           </>
         ) : (
           <p>No hay datos de capital disponibles</p>

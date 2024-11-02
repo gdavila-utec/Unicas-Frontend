@@ -45,8 +45,7 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
   const { monthlyInterestRate, loanFormValue } = useBoardConfig();
   const { toast } = useToast();
   const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
-  const { setReservaLegal, setFondoSocial, reserva_legal } = useJuntaValues();
-  console.log('reserva_legal: ', reserva_legal);
+  const { setJunta } = useJuntaValues();
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<LoanFormData>({
@@ -72,8 +71,7 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
       ]);
       setMembers(membersData);
       setPrestamos(prestamosData);
-      setReservaLegal(juntaData.base_capital);
-      setFondoSocial(juntaData.available_capital);
+      setJunta(juntaData);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({

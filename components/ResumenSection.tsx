@@ -8,10 +8,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useEffect, useState } from 'react';
-import { format } from 'date-fns';
+import { format, set } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { api } from '@/utils/api';
+import { Junta } from '@/types';
+import { useJuntaValues } from '@/store/juntaValues';
 
 interface Member {
   id: number;
@@ -54,17 +56,31 @@ interface Capital {
   fondo_social: number;
 }
 
-const ResumenSection = ({ juntaId }: { juntaId: string }) => {
+const ResumenSection = ({
+  juntaId,
+}: // junta,
+{
+  juntaId: string;
+  // juntaLocal: Junta;
+}) => {
+  // console.log('junta: ', junta);
   const [members, setMembers] = useState<Member[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [multas, setMultas] = useState<Multa[]>([]);
   const [acciones, setAcciones] = useState<Accion[]>([]);
   const [pagos, setPagos] = useState<Pago[]>([]);
-  const [capital, setCapital] = useState<Capital | null>(null);
+  // const [capital, setCapital] = useState<Capital | null>(null);
+  const { setJunta, junta } = useJuntaValues();
+  console.log('junta resumen: ', junta);
+
   const { isAuthenticated, isAdmin } = useAuth();
   const router = useRouter();
-
   useEffect(() => {
+    // setCapital({
+    //   reserva_legal: junta?.base_capital,
+    //   fondo_social: junta?.available_capital,
+    // });
+
     const fetchData = async () => {
       if (!isAuthenticated) {
         return;
@@ -77,14 +93,14 @@ const ResumenSection = ({ juntaId }: { juntaId: string }) => {
           multasData,
           accionesData,
           pagosData,
-          capitalData,
+          juntaData,
         ] = await Promise.all([
           api.get<Member[]>(`members/junta/${juntaId}`),
           api.get<Loan[]>(`prestamos/junta/${juntaId}`),
           api.get<Multa[]>(`multas/junta/${juntaId}`),
           api.get<Accion[]>(`acciones/junta/${juntaId}`),
           api.get<Pago[]>(`prestamos/junta/${juntaId}/pagos`),
-          api.get<Capital>(`capital/social/junta/${juntaId}`),
+          api.get<Junta>(`juntas/${juntaId}`),
         ]);
 
         setMembers(membersData);
@@ -92,7 +108,7 @@ const ResumenSection = ({ juntaId }: { juntaId: string }) => {
         setMultas(multasData);
         setAcciones(accionesData);
         setPagos(pagosData);
-        setCapital(capitalData);
+        setJunta(juntaData);
       } catch (error) {
         console.error('Error fetching data:', error);
         if (error instanceof Error && error.message === 'Session expired') {
@@ -257,10 +273,10 @@ const ResumenSection = ({ juntaId }: { juntaId: string }) => {
 
       <div>
         <h3 className='text-xl font-semibold'>Capital Social</h3>
-        {capital ? (
+        {junta ? (
           <>
-            <p>Reserva Legal: S/{capital.reserva_legal}</p>
-            <p>Fondo Social: S/{capital.fondo_social}</p>
+            <p>Reserva Legal: S/{junta?.base_capital}</p>
+            <p>Fondo Social: S/.{junta?.available_capital}</p>
           </>
         ) : (
           <p>No hay datos de capital disponibles</p>

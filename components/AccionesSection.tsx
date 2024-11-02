@@ -133,6 +133,7 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
       const jsonBody: Partial<Accion> = {
         type: 'COMPRA',
         amount: values.amount,
+        shareValue: shareValue,
         description: `Compra de acciones por ${
           values.amount
         } acciones el dia ${format(values.date, 'yyyy-MM-dd')}`,

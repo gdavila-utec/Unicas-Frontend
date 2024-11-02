@@ -1,6 +1,7 @@
 import './globals.css';
 import { Providers } from './providers';
 import { Toaster } from '@/components/ui/toaster';
+import { InitialLoader } from '../components/initial-loader';
 
 export default function RootLayout({
   children,
@@ -12,6 +13,7 @@ export default function RootLayout({
       <body>
         <Providers>
           {children}
+          <InitialLoader />
           <Toaster />
         </Providers>
       </body>

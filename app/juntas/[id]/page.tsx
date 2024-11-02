@@ -27,12 +27,15 @@ import PagosSection from '@/components/PagosSection';
 // import AgendaSection from '@/components/AgendaSection';
 import { Ajustes } from '@/components/Ajustes';
 import { api } from '@/utils/api';
+import { useJuntaValues } from '@/store/juntaValues';
 
 const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
   const [isClient, setIsClient] = useState(false);
-  const [junta, setJunta] = useState<any>(null);
+  // const [juntaLocal, setJuntaLocal] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { isAuthenticated, isAdmin, token } = useAuth();
+  const { setJunta, junta } = useJuntaValues();
+  console.log('junta: ', junta);
   const router = useRouter();
 
   const handleGetJunta = async () => {
@@ -44,6 +47,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
     try {
       // Using the api utility instead of direct fetch
       const data = await api.get(`juntas/${params.id}`);
+      // setJuntaLocal(data);
       setJunta(data);
     } catch (error) {
       console.error('Error fetching junta:', error);
@@ -105,7 +109,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
             <Skeleton className='h-8 w-2/3 mb-4' />
           ) : (
             <h2 className='text-xl font-semibold mb-4'>
-              {junta ? junta.name : 'No junta encontrada'}
+              {/* {junta ? junta?.name : 'No junta encontrada'} */}
             </h2>
           )}
           <Tabs
@@ -127,7 +131,10 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
             <Card className='bg-white shadow-sm'>
               <CardContent className='p-4 sm:p-6'>
                 <TabsContent value='resumen'>
-                  <ResumenSection juntaId={params.id} />
+                  <ResumenSection
+                    juntaId={params.id}
+                    // juntaLocal={juntaLocal}
+                  />
                 </TabsContent>
                 <TabsContent value='socios'>
                   <MemberSection juntaId={params.id} />

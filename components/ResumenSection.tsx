@@ -242,7 +242,7 @@ const ResumenSection = ({ juntaId }: { juntaId: string }) => {
                   <TableCell>{pago.member_name}</TableCell>
                   <TableCell>S/.{pago.amount}</TableCell>
                   <TableCell>
-                    {format(new Date(pago.fecha_pago), 'yyyy-MM-dd')}
+                    {/* {format(new Date(pago.fecha_pago), 'yyyy-MM-dd')} */}
                   </TableCell>
                 </TableRow>
               ))

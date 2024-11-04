@@ -21,7 +21,7 @@ export function JuntaCard({
   onSelectJunta: (junta: Junta) => void;
   onDeleteJunta: (juntaId: number) => void;
 }) {
-  console.log('junta: ', junta);
+  console.log('junta: ', junta, 'junta card', junta.available_capital);
   const totalSavings = junta.total_shares * junta.share_value;
   const progress = (junta.current_month / junta.duration_months) * 100;
   return (
@@ -36,7 +36,7 @@ export function JuntaCard({
         <div className='space-y-4'>
           <div className='flex justify-between items-center'>
             <span className='flex items-center'>
-              Capital Social: S/.{totalSavings}
+              Capital Social: S/.{junta.available_capital}
             </span>
             <span className='flex items-center'>
               <UserIcon className='mr-2 h-4 w-4' />

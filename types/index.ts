@@ -1,3 +1,5 @@
+import { unknown } from 'zod';
+
 export interface User {
   id: string;
   email?: string;
@@ -125,34 +127,6 @@ export interface JuntaMember {
   user: User;
   junta: Junta;
 }
-
-// export interface Member {
-//   additional_info: null | string;
-//   address: string;
-//   beneficiary_address: string;
-//   beneficiary_document_number: string;
-//   beneficiary_document_type: string;
-//   beneficiary_full_name: string;
-//   beneficiary_phone: string;
-//   birth_date: string;
-//   createdAt: string;
-//   document_number: string;
-//   document_type: string;
-//   email: string;
-//   full_name: string;
-//   gender: string;
-//   id: string;
-//   join_date: string;
-//   joinedAt: string;
-//   member_role: string;
-//   password: string;
-//   phone: string;
-//   productive_activity: string;
-//   role: string;
-//   status: string;
-//   updatedAt: string;
-//   username: string;
-// }
 
 export interface Member {
   id: string;
@@ -288,6 +262,64 @@ export interface PagoPrestamo {
   prestamo: Prestamo;
 }
 
+export interface Pago {
+  id: string;
+  amount: number;
+  date: Date;
+  memberName: string;
+  fecha_pago: Date;
+  capital_payment: number;
+  interest_payment: number;
+  late_payment: number;
+  quota_payment: number;
+  remaining_balance: number;
+  remaining_installments: number;
+  prestamoId: string;
+  original_pago_id?: string;
+  affects_capital: boolean;
+  prestamo: Prestamo;
+}
+
+export interface PagoItem {
+  id: string;
+  amount: number;
+  date: string;
+  prestamoId: string;
+  original_pago_id?: string;
+  affects_capital: boolean;
+  prestamo: {
+    member: {
+      full_name: string;
+    };
+    remaining_amount: number;
+    monthly_interest: number;
+  };
+}
+
+export interface FormattedPago {
+  id: string;
+  amount: number;
+  date: string;
+  prestamoId: string;
+  original_pago_id?: string;
+  affects_capital: boolean;
+  prestamo: {
+    member: {
+      full_name: string;
+    };
+    remaining_amount: number;
+    monthly_interest: number;
+  };
+  memberName: string;
+  fecha_pago: string;
+  capital_payment: number;
+  interest_payment: number;
+  late_payment: number;
+  quota_payment: number;
+  remaining_balance: number;
+  remaining_installments: number;
+}
+
 // Response types
 export interface PaginatedResponse<T> {
   data: T[];
@@ -350,4 +382,27 @@ export interface CreatePrestamoDto {
   amount: string;
   monthly_interest: string;
   request_date: string;
+}
+
+export interface Payment {
+  id: string;
+  due_date: string;
+  expected_amount: number;
+  principal: number;
+  interest: number;
+  installment_number: number;
+  prestamoId: string;
+  status: 'PENDING' | 'PAID' | 'OVERDUE';
+  createdAt: string;
+  updatedAt: string;
+  checkValue: boolean;
+}
+
+export interface LoanStatus {
+  totalPaid: number;
+  remainingAmount: number;
+  remainingPayments: Payment[];
+  nextPaymentDue: Payment;
+  nextPaymentDate: string;
+  isOverdue: boolean;
 }

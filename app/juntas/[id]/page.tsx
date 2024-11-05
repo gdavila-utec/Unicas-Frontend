@@ -12,6 +12,7 @@ import {
   CreditCard,
   Calendar,
   Settings,
+  PiggyBank,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ import PagosSection from '@/components/PagosSection';
 import { Ajustes } from '@/components/Ajustes';
 import { api } from '@/utils/api';
 import { useJuntaValues } from '@/store/juntaValues';
+import { Junta } from '@/types/index';
 
 const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
   const [isClient, setIsClient] = useState(false);
@@ -35,6 +37,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { isAuthenticated, isAdmin, token } = useAuth();
   const { setJunta, junta } = useJuntaValues();
+  const [capital, setCapital] = useState(null);
   console.log('junta: ', junta);
   const router = useRouter();
 
@@ -47,6 +50,8 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
     try {
       // Using the api utility instead of direct fetch
       const data = await api.get(`juntas/${params.id}`);
+
+      setCapital(data.available_capital);
       // setJuntaLocal(data);
       setJunta(data);
     } catch (error) {
@@ -81,6 +86,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
     { value: 'acciones', label: 'Acciones', icon: TrendingUp },
     { value: 'pagos', label: 'Pagos', icon: CreditCard },
     // { value: 'agenda', label: 'Agenda', icon: Calendar },
+    { value: 'config', label: capital, icon: PiggyBank },
     { value: 'config', label: '', icon: Settings },
   ];
 
@@ -90,7 +96,9 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
         <CardHeader className='bg-primary text-primary-foreground'>
           <div className='flex items-center justify-between'>
             <CardTitle className='text-2xl sm:text-3xl font-bold'>
-              UNICA Vecinal Dashboard
+              <span>UNICA Vecinal Dashboard</span>
+
+              <span className='text-sm sm:text-base font-normal text-white ml-40'></span>
             </CardTitle>
             <Link href='/'>
               <Button

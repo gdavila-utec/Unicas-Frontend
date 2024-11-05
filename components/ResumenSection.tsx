@@ -7,41 +7,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, ReactNode, useMemo } from 'react';
 import { format, set } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { api } from '@/utils/api';
-import { Junta } from '@/types';
+import { Junta, Member, Prestamo, Accion, PaymentHistory } from '@/types';
 import { useJuntaValues } from '@/store/juntaValues';
-
-interface Member {
-  id: number;
-  full_name: string;
-  document_type: string;
-  document_number: string;
-}
-
-interface Loan {
-  id: number;
-  member_name: string;
-  amount: number;
-  remaining_amount: number;
-  remaining_installments: number;
-}
 
 interface Multa {
   id: number;
   member_name: string;
   reason: string;
   amount: number;
-}
-
-interface Accion {
-  id: number;
-  member_name: string;
-  quantity: number;
-  value: number;
 }
 
 interface Pago {
@@ -63,13 +41,14 @@ const ResumenSection = ({
   juntaId: string;
   // juntaLocal: Junta;
 }) => {
-  // console.log('junta: ', junta);
   const [members, setMembers] = useState<Member[]>([]);
-  const [loans, setLoans] = useState<Loan[]>([]);
+  const [loans, setLoans] = useState<Prestamo[]>([]);
   const [multas, setMultas] = useState<Multa[]>([]);
   const [acciones, setAcciones] = useState<Accion[]>([]);
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [capital, setCapital] = useState<Capital | null>(null);
+  const [historialPagos, setHistorialPagos] = useState<PaymentHistory[]>([]);
+  console.log('historialPagos: ', historialPagos);
   const { setJunta, junta } = useJuntaValues();
   console.log('junta resumen: ', junta);
 
@@ -100,13 +79,15 @@ const ResumenSection = ({
           accionesData,
           pagosData,
           juntaData,
+          historialPagos,
         ] = await Promise.all([
           api.get<Member[]>(`members/junta/${juntaId}`),
-          api.get<Loan[]>(`prestamos/junta/${juntaId}`),
+          api.get<Prestamo[]>(`prestamos/junta/${juntaId}`),
           api.get<Multa[]>(`multas/junta/${juntaId}`),
           api.get<Accion[]>(`acciones/junta/${juntaId}`),
           api.get<Pago[]>(`prestamos/junta/${juntaId}/pagos`),
           api.get<Junta>(`juntas/${juntaId}`),
+          api.get<PaymentHistory[]>(`junta-payments/${juntaId}/history`),
         ]);
 
         setMembers(membersData);
@@ -115,6 +96,7 @@ const ResumenSection = ({
         setAcciones(accionesData);
         setPagos(pagosData);
         setJunta(juntaData);
+        setHistorialPagos(historialPagos);
       } catch (error) {
         console.error('Error fetching data:', error);
         if (error instanceof Error && error.message === 'Session expired') {
@@ -144,14 +126,16 @@ const ResumenSection = ({
           </TableHeader>
           <TableBody>
             {members.length > 0 ? (
-              members.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>{member.full_name}</TableCell>
-                  <TableCell>
-                    {member.document_type}: {member.document_number}
-                  </TableCell>
-                </TableRow>
-              ))
+              members
+                .filter((member) => member.member_role === 'socio')
+                .map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell>{member.full_name}</TableCell>
+                    <TableCell>
+                      {member.document_type}: {member.document_number}
+                    </TableCell>
+                  </TableRow>
+                ))
             ) : (
               <TableRow>
                 <TableCell colSpan={2}>No hay socios registrados</TableCell>
@@ -176,10 +160,16 @@ const ResumenSection = ({
             {loans.length > 0 ? (
               loans.map((loan) => (
                 <TableRow key={loan.id}>
-                  <TableCell>{loan.member_name}</TableCell>
+                  <TableCell>{loan.member.full_name}</TableCell>
                   <TableCell>S/.{loan.amount}</TableCell>
                   <TableCell>S/.{loan.remaining_amount}</TableCell>
-                  <TableCell>{loan.remaining_installments}</TableCell>
+                  <TableCell>
+                    {
+                      loan.paymentSchedule.filter(
+                        (payment) => payment.status !== 'PAID'
+                      ).length
+                    }
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
@@ -233,9 +223,9 @@ const ResumenSection = ({
             {acciones.length > 0 ? (
               acciones.map((accion) => (
                 <TableRow key={accion.id}>
-                  <TableCell>{accion.member_name}</TableCell>
-                  <TableCell>{accion.quantity}</TableCell>
-                  <TableCell>S/.{accion.value}</TableCell>
+                  <TableCell>{accion.member.full_name}</TableCell>
+                  <TableCell>{accion.amount}</TableCell>
+                  <TableCell>S/.{accion.shareValue}</TableCell>
                 </TableRow>
               ))
             ) : (
@@ -258,16 +248,27 @@ const ResumenSection = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pagos.length > 0 ? (
-              pagos.map((pago) => (
-                <TableRow key={pago.id}>
-                  <TableCell>{pago.member_name}</TableCell>
-                  <TableCell>S/.{pago.amount}</TableCell>
-                  <TableCell>
-                    {/* {format(new Date(pago.fecha_pago), 'yyyy-MM-dd')} */}
-                  </TableCell>
-                </TableRow>
-              ))
+            {loans.length > 0 ? (
+              loans.map((loan) =>
+                loan.paymentSchedule.map((payment) => (
+                  <TableRow key={payment.id}>
+                    <TableCell>{loan.member.full_name}</TableCell>
+                    <TableCell>
+                      S/.{payment.expected_amount.toFixed(2)}
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(payment.due_date), 'yyyy-MM-dd')}
+                    </TableCell>
+                    <TableCell>
+                      {payment.status === 'PAID' ? (
+                        <span className='text-green-500'>Pagado</span>
+                      ) : (
+                        <span className='text-red-500'>Pendiente</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )
             ) : (
               <TableRow>
                 <TableCell colSpan={3}>No hay pagos registrados</TableCell>

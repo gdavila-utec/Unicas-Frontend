@@ -163,6 +163,25 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
 
   if (loading) return <div>Loading...</div>;
 
+  const handleDeleteAcciones = async (id: string) => {
+    try {
+      await api.delete(`acciones/${id}`);
+      await fetchAcciones();
+      toast({
+        title: 'Success',
+        description: 'Accion eliminada exitosamente',
+      });
+    } catch (error) {
+      console.error('Error deleting accion:', error);
+      setError(error);
+      toast({
+        title: 'Error',
+        description: perro,
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className='space-y-8 p-6'>
       <div>
@@ -192,16 +211,18 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {members.map((member) => (
-                          <SelectItem
-                            key={member.id}
-                            value={member.id}
-                          >
-                            {member.full_name ||
-                              member.username ||
-                              'Usuario sin nombre'}
-                          </SelectItem>
-                        ))}
+                        {members
+                          .filter((member) => member.member_role === 'socio')
+                          .map((member) => (
+                            <SelectItem
+                              key={member.id}
+                              value={member.id}
+                            >
+                              {member.full_name ||
+                                member.username ||
+                                'Usuario sin nombre'}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </FormItem>
@@ -327,6 +348,14 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                   </TableCell>
                   <TableCell>{accion.amount}</TableCell>
                   <TableCell>{accion.amount * shareValue}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant='destructive'
+                      onClick={() => handleDeleteAcciones(accion.id)}
+                    >
+                      Eliminar
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
               <TableRow>

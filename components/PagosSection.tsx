@@ -42,7 +42,15 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { api } from '@/utils/api';
 import { useError } from '@/hooks/useError';
-import { Pago, PagoItem, FormattedPago, LoanStatus, Payment } from '@/types';
+import {
+  Pago,
+  PagoItem,
+  FormattedPago,
+  LoanStatus,
+  Payment,
+  PaymentHistory,
+  Prestamo,
+} from '@/types';
 
 const formSchema = z.object({
   date: z.date(),
@@ -58,8 +66,10 @@ const formSchema = z.object({
 export default function PagosSection({ juntaId }: { juntaId: string }) {
   const [members, setMembers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [loans, setLoans] = useState<any[]>([]);
-  const [history, setHistory] = useState<FormattedPago[]>([]);
+  const [loans, setLoans] = useState<Prestamo[]>([]);
+  console.log('loans: ', loans);
+  const [history, setHistory] = useState<PaymentHistory[]>([]);
+  console.log('history: ', history);
   const [loanStatus, setLoanStatus] = useState<LoanStatus | unknown>(null);
   const [remainingInstallmentsInfo, setRemainingInstallmentsInfo] = useState<
     Payment[]
@@ -154,9 +164,9 @@ export default function PagosSection({ juntaId }: { juntaId: string }) {
   const fetchHistory = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get(`prestamos/junta/${juntaId}/pagos`);
-      const pagos = formatPagosHistory(response);
-      setHistory(pagos);
+      const response = await api.get(`junta-payments/${juntaId}/history`);
+      console.log('pagos history response: ', response);
+      setHistory(response);
     } catch (error) {
       setError(error);
       console.error('Error fetching data:', error);
@@ -210,16 +220,37 @@ export default function PagosSection({ juntaId }: { juntaId: string }) {
       setRemainingInstallmentsInfo(loanStatusCheck.remainingPayments);
     }
   }, [loanStatus]);
+
   const handleFormChange = () => {
-    const filteredLoansByMember = loans.filter(
-      (loan: { memberId: string }) => loan.memberId === form.getValues('member')
-    );
-    setPrestamoId(form.getValues('loan'));
-    setLoans(filteredLoansByMember);
+    const memberId = form.getValues('member');
     const loanId = form.getValues('loan');
+    const filteredLoansByMember = loans.filter(
+      (loan: { memberId: string }) => loan.memberId === memberId
+    );
+    setPrestamoId(loanId);
+    setLoans(filteredLoansByMember);
     if (loanId) {
       fetchRemainingInstallmentsInfo(loanId);
     }
+    // if (history) {
+    //   if (memberId && loanId) {
+    //     const filteredPagosHistoryByMemberAndPrestamo = history.filter(
+    //       (pago: { memberId: string; prestamoId: string }) =>
+    //         pago.memberId === memberId && pago.prestamoId === prestamoId
+    //     );
+    //     setHistory(filteredPagosHistoryByMemberAndPrestamo);
+    //   } else if (memberId) {
+    //     const filteredPagosHistoryByMember = history.filter(
+    //       (pago: { memberId: string }) => pago.memberId === memberId
+    //     );
+    //     setHistory(filteredPagosHistoryByMember);
+    //   } else if (loanId) {
+    //     const filteredPagosHistoryByPrestamo = history.filter(
+    //       (pago: { prestamoId: string }) => pago.prestamoId === prestamoId
+    //     );
+    //     setHistory(filteredPagosHistoryByPrestamo);
+    //   }
+    // }
   };
 
   const handleCuotaCheck = (installment: Payment) => {
@@ -239,6 +270,28 @@ export default function PagosSection({ juntaId }: { juntaId: string }) {
             'solo puede seleccionar la cuota que le corresponde pagar antes de poder pagar otras cuotas',
         });
       }
+    }
+  };
+
+  const handleDeletePago = async (id: string) => {
+    setIsLoading(true);
+    try {
+      await api.delete(`prestamos/pagos/${id}`);
+      await fetchHistory();
+      toast({
+        title: 'Pago eliminado',
+        description: 'El pago se ha eliminado exitosamente.',
+      });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError(error);
+      toast({
+        title: 'Error',
+        description: perro,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -372,9 +425,12 @@ export default function PagosSection({ juntaId }: { juntaId: string }) {
                         {loans.map((loan) => (
                           <SelectItem
                             key={loan.id}
-                            value={loan.id.toString()}
+                            value={loan.id}
                           >
-                            {loan.amount} soles - {loan.request_date}
+                            {loan.loan_number} - {loan.loan_code} -{' '}
+                            {loan.loan_type} - {loan.amount} soles -{' '}
+                            {loan.number_of_installments} cuotas
+                            {/* { loan.} {loan.amount} soles - {loan.request_date} */}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -560,7 +616,7 @@ export default function PagosSection({ juntaId }: { juntaId: string }) {
                 <TableHead>Pago de cuota</TableHead>
                 <TableHead>Saldo pendiente de pago</TableHead>
                 <TableHead>Cuotas pendientes</TableHead>
-                <TableHead>Acciones</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -568,22 +624,25 @@ export default function PagosSection({ juntaId }: { juntaId: string }) {
                 history.map((payment, index) => (
                   <TableRow key={payment.id}>
                     <TableCell>{index + 1}</TableCell>
-                    <TableCell>{payment.memberName}</TableCell>
-                    <TableCell>{payment.fecha_pago}</TableCell>
-                    <TableCell className='align-left'>
-                      {payment.capital_payment - payment.interest_payment}
+                    <TableCell>{payment.prestamo.member.full_name}</TableCell>
+                    <TableCell>
+                      {format(new Date(payment.date), 'dd/MM/yyyy')}
                     </TableCell>
-                    <TableCell>{payment.interest_payment}</TableCell>
-                    <TableCell>{payment.late_payment}</TableCell>
-                    <TableCell>{payment.quota_payment}</TableCell>
-                    <TableCell>{payment.remaining_balance}</TableCell>
+                    <TableCell className='align-left'>
+                      {payment.principal_paid.toFixed(2)}
+                    </TableCell>
+                    <TableCell>{payment.interest_paid.toFixed(2)}</TableCell>
+                    <TableCell>{0}</TableCell>
+                    <TableCell>{payment.amount.toFixed(2)}</TableCell>
+                    <TableCell>{payment.remaining_amount.toFixed(2)}</TableCell>
                     <TableCell>{payment.remaining_installments}</TableCell>
+                    <TableCell>{payment.prestamo.status}</TableCell>
                     <TableCell>
                       <Button
-                        variant='ghost'
-                        size='sm'
+                        variant='destructive'
+                        onClick={() => handleDeletePago(payment.id)}
                       >
-                        Ver detalles
+                        Eliminar
                       </Button>
                     </TableCell>
                   </TableRow>

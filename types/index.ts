@@ -246,9 +246,10 @@ export interface Prestamo {
   payment_type: string;
   reason: string;
   loan_type: string;
-  pagos: PagoPrestamo[];
+  pagos: Pago[];
   junta: Junta;
   member: User;
+  paymentSchedule: PaymentSchedule[];
 }
 
 // Pago types
@@ -405,4 +406,36 @@ export interface LoanStatus {
   nextPaymentDue: Payment;
   nextPaymentDate: string;
   isOverdue: boolean;
+}
+
+export interface PaymentSchedule {
+  id: string;
+  due_date: Date;
+  expected_amount: number;
+  principal: number;
+  interest: number;
+  installment_number: number;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  prestamoId: string;
+}
+
+export interface PaymentHistory {
+  id: string;
+  prestamoId: string;
+  amount: number;
+  date: Date;
+  status: 'PENDING' | 'PAID' | 'OVERDUE';
+  payment_method?: string;
+  reference_number?: string;
+  created_at: Date;
+  updated_at: Date;
+  prestamo: Prestamo;
+  principal_paid: number;
+  remaining_amount: number;
+  remaining_interest: number;
+  interest_paid: number;
+  remaining_installments: number;
+  memberId: string;
 }

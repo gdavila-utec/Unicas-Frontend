@@ -154,6 +154,24 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
     );
   }
 
+  const handleDeleteLoan = async (id: string) => {
+    try {
+      await api.delete(`prestamos/${id}`);
+      await fetchData();
+      toast({
+        title: 'Éxito',
+        description: 'Préstamo eliminado correctamente',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error al eliminar préstamo',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className='space-y-8'>
       <Card>
@@ -375,10 +393,14 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {/* {loan.loan_number} - {loan.loan_code} - {loan.loan_type} -{' '}
+              {loan.amount} soles - {loan.number_of_installments} */}
               {prestamos.map((prestamo, index) => (
                 <TableRow key={prestamo.id}>
                   <TableCell>{index + 1}</TableCell>
-                  <TableCell>{prestamo.id}</TableCell>
+                  <TableCell>
+                    {prestamo.loan_code}-{prestamo.loan_number}
+                  </TableCell>
                   <TableCell>{prestamo.member.full_name}</TableCell>
                   <TableCell>
                     {new Date(prestamo.request_date).toLocaleDateString()}
@@ -388,10 +410,10 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
                   <TableCell>{prestamo.loan_type}</TableCell>
                   <TableCell>
                     <Button
-                      variant='ghost'
-                      size='icon'
+                      variant='destructive'
+                      onClick={() => handleDeleteLoan(prestamo.id)}
                     >
-                      <Eye className='h-4 w-4' />
+                      Eliminar
                     </Button>
                   </TableCell>
                 </TableRow>

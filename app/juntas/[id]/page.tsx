@@ -86,7 +86,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
     { value: 'acciones', label: 'Acciones', icon: TrendingUp },
     { value: 'pagos', label: 'Pagos', icon: CreditCard },
     // { value: 'agenda', label: 'Agenda', icon: Calendar },
-    { value: 'config', label: capital, icon: PiggyBank },
+    { value: 'PiggyBank', label: capital, icon: PiggyBank },
     { value: 'config', label: '', icon: Settings },
   ];
 

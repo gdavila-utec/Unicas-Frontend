@@ -387,6 +387,7 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
                 <TableHead>Nombre completo (Socio)</TableHead>
                 <TableHead>Fecha de inicio</TableHead>
                 <TableHead>Monto solicitado</TableHead>
+                <TableHead>Tasa de Interes</TableHead>
                 <TableHead>Cuotas</TableHead>
                 <TableHead>Forma de pago</TableHead>
                 <TableHead>Acciones</TableHead>
@@ -406,6 +407,7 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
                     {new Date(prestamo.request_date).toLocaleDateString()}
                   </TableCell>
                   <TableCell>S/ {prestamo.amount}</TableCell>
+                  <TableCell>{prestamo.monthly_interest}%</TableCell>
                   <TableCell>{prestamo.number_of_installments}</TableCell>
                   <TableCell>{prestamo.loan_type}</TableCell>
                   <TableCell>

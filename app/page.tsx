@@ -218,7 +218,7 @@ const Home: React.FC = () => {
             {isAdmin && (
               <div className='animate-in fade-in duration-300 space-y-0'>
                 <div className='flex items-center justify-between gap-5'>
-                  <Button
+                  {/* <Button
                     variant='outline'
                     className={`flex items-center gap-2 ${
                       view === 'crear-unica'
@@ -228,7 +228,7 @@ const Home: React.FC = () => {
                     onClick={() => setView('crear-unica')}
                   >
                     Agregar Junta
-                  </Button>
+                  </Button> */}
                   <Button
                     variant='outline'
                     className={`flex items-center gap-2 ${
@@ -253,6 +253,33 @@ const Home: React.FC = () => {
           </CardContent>
         </Card>
         {isAdmin && (
+          <Card className='shadow-lg rounded-t-none p-4 border-none'>
+            <CardContent>
+              <Button
+                onClick={() => setIsAddJuntaOpen(true)}
+                className='w-full flex items-center justify-center gap-2 bg-black text-white mb-4'
+              >
+                <PlusCircle className='w-4 h-4' />
+                Agregar Junta
+              </Button>
+
+              <AddJuntaComponent
+                onJuntaAdded={handleGetJuntas}
+                open={isAddJuntaOpen}
+                onOpenChange={setIsAddJuntaOpen}
+              />
+
+              <AdminView
+                juntas={juntas}
+                loading={loading}
+                onSelectJunta={(junta) => router.push(`/juntas/${junta.id}`)}
+                onDeleteJunta={(juntaId) => setDeleteJuntaId(juntaId)}
+                onJuntaAdded={handleGetJuntas}
+              />
+            </CardContent>
+          </Card>
+        )}
+        {/* {isAdmin && (
           <Card className='shadow-lg rounded-t-none p-4 border-none'>
             <CardContent>
               {loading ? (
@@ -289,7 +316,7 @@ const Home: React.FC = () => {
               />
             </CardContent>
           </Card>
-        )}
+        )} */}
       </div>
 
       <DeleteJuntaDialog

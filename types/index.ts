@@ -371,11 +371,7 @@ export interface CreatePrestamoDto {
     | 'CUOTA_FIJA'
     | 'CUOTA_VENCIMIENTO'
     | 'CUOTA_VARIABLE';
-  payment_type:
-    | 'CUOTA_REBATIR'
-    | 'CUOTA_FIJA'
-    | 'CUOTA_VENCIMIENTO'
-    | 'CUOTA_VARIABLE';
+  payment_type: PaymentType;
   reason: string;
   guarantee_type: 'AVAL' | 'INMUEBLE' | 'HIPOTECARIA' | 'PRENDARIA';
   guarantee_detail: string;

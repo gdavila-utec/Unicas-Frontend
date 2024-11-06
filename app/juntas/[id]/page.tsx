@@ -38,7 +38,8 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
   const { isAuthenticated, isAdmin, token } = useAuth();
   const { setJunta, junta } = useJuntaValues();
   const [capital, setCapital] = useState(null);
-  console.log('junta: ', junta);
+  console.log('capital: ', capital);
+  // console.log('junta: ', junta);
   const router = useRouter();
 
   const handleGetJunta = async () => {
@@ -51,7 +52,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
       // Using the api utility instead of direct fetch
       const data = await api.get(`juntas/${params.id}`);
 
-      setCapital(data.available_capital);
+      setCapital(data.available_capital.toFixed(2));
       // setJuntaLocal(data);
       setJunta(data);
     } catch (error) {
@@ -63,6 +64,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
 
   useEffect(() => {
     setIsClient(true);
+    handleGetJunta();
   }, []);
 
   useEffect(() => {
@@ -71,9 +73,9 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
       return;
     }
 
-    if (isAuthenticated) {
-      handleGetJunta();
-    }
+    // if (isAuthenticated) {
+    //   handleGetJunta();
+    // }
   }, [isAuthenticated, params.id]);
 
   if (!isAuthenticated) return null;
@@ -83,10 +85,14 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
     { value: 'socios', label: 'Socios', icon: User },
     { value: 'prestamos', label: 'Préstamos', icon: DollarSign },
     { value: 'multas', label: 'Multas', icon: AlertTriangle },
-    { value: 'acciones', label: 'Acciones', icon: TrendingUp },
+    {
+      value: 'acciones',
+      label: `Acciones ${capital ? 'S/.' + capital : ' '}`,
+      icon: PiggyBank,
+    },
     { value: 'pagos', label: 'Pagos', icon: CreditCard },
     // { value: 'agenda', label: 'Agenda', icon: Calendar },
-    { value: 'PiggyBank', label: capital, icon: PiggyBank },
+
     { value: 'config', label: '', icon: Settings },
   ];
 

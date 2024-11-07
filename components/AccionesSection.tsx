@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -36,9 +36,13 @@ import { CalendarIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useError } from '@/hooks/useError';
-import { api } from '@/utils/api';
-import { Accion, Member } from '@/types';
+import { api, handleApiError } from '@/utils/api';
+import { Accion, Member, Junta } from '@/types';
 import { useBoardConfig } from '@/store/configValues';
+import { useAccionesStore } from '@/store/accionesStore';
+import { useJuntaStore } from '@/store/juntaValues';
+import { useMemberStore } from '@/store/memberStore';
+import { useCapitalStore } from '@/store/useCapitalStore';
 
 interface AccionesSectionProps {
   juntaId: string;
@@ -55,10 +59,16 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function AccionesSection({ juntaId }: AccionesSectionProps) {
   const { perro, setError } = useError();
-  const [acciones, setAcciones] = useState<Accion[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
-  console.log('members: ', members);
   const [loading, setIsLoading] = useState(false);
+  const { getJuntaAcciones, setAcciones } = useAccionesStore();
+  const { setSelectedJunta } = useJuntaStore();
+  const { getJuntaMembers } = useMemberStore();
+  const members = useMemo(() => getJuntaMembers() ?? [], [getJuntaMembers]);
+  const acciones = useMemo(
+    () => getJuntaAcciones(juntaId),
+    [getJuntaAcciones, juntaId]
+  );
+  const { updateAvailableCapital } = useCapitalStore();
   const { toast } = useToast();
   const {
     shareValue,
@@ -69,13 +79,13 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
     defaultInterestRate,
     loanFormValue,
   } = useBoardConfig();
-  console.log('loanFormValue: ', loanFormValue);
-  console.log('defaultInterestRate: ', defaultInterestRate);
-  console.log('absenceFee: ', absenceFee);
-  console.log('latePaymentFee: ', latePaymentFee);
-  console.log('monthlyInterestRate: ', monthlyInterestRate);
-  console.log('meetingDate: ', meetingDate);
-  console.log('shareValue: ', shareValue);
+  // console.log('loanFormValue: ', loanFormValue);
+  // console.log('defaultInterestRate: ', defaultInterestRate);
+  // console.log('absenceFee: ', absenceFee);
+  // console.log('latePaymentFee: ', latePaymentFee);
+  // console.log('monthlyInterestRate: ', monthlyInterestRate);
+  // console.log('meetingDate: ', meetingDate);
+  // console.log('shareValue: ', shareValue);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -87,31 +97,39 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
     },
   });
 
-  const fetchAcciones = async () => {
+  // const fetchAcciones = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     const response = await api.get<Accion[]>(`acciones/junta/${juntaId}`);
+  //     setAcciones(Array.isArray(response) ? response : []);
+  //   } catch (error) {
+  //     console.error('Error fetching acciones:', error);
+  //     setError(error);
+  //     toast({
+  //       title: 'Error',
+  //       description: perro,
+  //       variant: 'destructive',
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Fetch acciones
       const response = await api.get<Accion[]>(`acciones/junta/${juntaId}`);
       setAcciones(Array.isArray(response) ? response : []);
-    } catch (error) {
-      console.error('Error fetching acciones:', error);
-      setError(error);
-      toast({
-        title: 'Error',
-        description: perro,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const fetchMembers = async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.get<Member[]>(`members/junta/${juntaId}`);
-      setMembers(Array.isArray(response) ? response : []);
+      // Fetch junta
+      const juntaData = await api.get(`juntas/${juntaId}`);
+      console.log('juntaData: ', juntaData);
+
+      // Update fondo social
+      updateAvailableCapital(juntaData);
     } catch (error) {
-      console.error('Error fetching members:', error);
+      console.error('Error fetching data:', error);
       setError(error);
       toast({
         title: 'Error',
@@ -121,12 +139,36 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [juntaId, setAcciones, setSelectedJunta, setError]);
 
   useEffect(() => {
-    fetchMembers();
-    fetchAcciones();
-  }, [juntaId]);
+    fetchData();
+  }, [fetchData]);
+
+  // Fetch juntas when view is set to admin
+
+  // const fetchMembers = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     const response = await api.get<Member[]>(`members/junta/${juntaId}`);
+  //     setMembers(Array.isArray(response) ? response : []);
+  //   } catch (error) {
+  //     console.error('Error fetching members:', error);
+  //     setError(error);
+  //     toast({
+  //       title: 'Error',
+  //       description: perro,
+  //       variant: 'destructive',
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   fetchMembers();
+  //   fetchAcciones();
+  // }, [juntaId]);
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -142,7 +184,7 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
       };
 
       await api.post('acciones', jsonBody);
-      await fetchAcciones();
+      await fetchData();
 
       toast({
         title: 'Success',
@@ -166,7 +208,8 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
   const handleDeleteAcciones = async (id: string) => {
     try {
       await api.delete(`acciones/${id}`);
-      await fetchAcciones();
+      await fetchData();
+
       toast({
         title: 'Success',
         description: 'Accion eliminada exitosamente',
@@ -212,14 +255,16 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                       </FormControl>
                       <SelectContent>
                         {members
-                          .filter((member) => member.member_role === 'socio')
+                          .filter(
+                            (member) => member.user.member_role === 'socio'
+                          )
                           .map((member) => (
                             <SelectItem
-                              key={member.id}
-                              value={member.id}
+                              key={member.user.id}
+                              value={member.user.id}
                             >
-                              {member.full_name ||
-                                member.username ||
+                              {member.user.full_name ||
+                                member.user.username ||
                                 'Usuario sin nombre'}
                             </SelectItem>
                           ))}

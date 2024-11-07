@@ -25,7 +25,9 @@ import { api } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
 import { useBoardConfig } from '@/store/configValues';
 import { Member, Prestamo, PaymentType, GuaranteeType, Junta } from '@/types';
-import { useJuntaValues } from '@/store/juntaValues';
+import { useJuntaStore } from '@/store/juntaValues';
+import { useCapitalStore } from '@/store/useCapitalStore';
+
 import { set } from 'date-fns';
 
 interface LoanFormData {
@@ -45,9 +47,11 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
   const { monthlyInterestRate, loanFormValue } = useBoardConfig();
   const { toast } = useToast();
   const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
-  const { setJunta } = useJuntaValues();
+  const { setSelectedJunta, getJuntaById } = useJuntaStore();
+  const junta = getJuntaById(juntaId);
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { updateAvailableCapital } = useCapitalStore();
   const [formData, setFormData] = useState<LoanFormData>({
     memberId: '',
     requestDate: new Date().toISOString().split('T')[0],
@@ -71,7 +75,7 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
       ]);
       setMembers(membersData);
       setPrestamos(prestamosData);
-      setJunta(juntaData);
+      setSelectedJunta(juntaData);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -128,10 +132,11 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
         form_purchased: formData.formPurchased,
         payment_type: 'MENSUAL' as PaymentType,
       };
+      console.log('payload: ', payload);
 
       await api.post('prestamos', payload);
       await fetchData();
-
+      updateAvailableCapital(junta);
       toast({
         title: 'Éxito',
         description: 'Préstamo registrado correctamente',

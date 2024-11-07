@@ -51,6 +51,8 @@ import {
   PaymentHistory,
   Prestamo,
 } from '@/types';
+import { useCapitalStore } from '@/store/useCapitalStore';
+import { useJuntaStore } from '@/store/juntaValues';
 
 const formSchema = z.object({
   date: z.date(),
@@ -79,6 +81,9 @@ export default function PagosSection({ juntaId }: { juntaId: string }) {
   const [prestamoId, setPrestamoId] = useState<string>('');
   const { toast } = useToast();
   const { perro, setError } = useError();
+  const { updateAvailableCapital } = useCapitalStore();
+  const { setSelectedJunta, getJuntaById } = useJuntaStore();
+  const junta = getJuntaById(juntaId);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -99,7 +104,7 @@ export default function PagosSection({ juntaId }: { juntaId: string }) {
       await handleGetMembers();
       await fetchLoans();
       await fetchHistory();
-
+      updateAvailableCapital(junta);
       setIsLoading(false);
     };
     fetchData();
@@ -180,40 +185,6 @@ export default function PagosSection({ juntaId }: { juntaId: string }) {
     }
   };
 
-  const formatPagosHistory = (history: PagoItem[]): FormattedPago[] => {
-    if (!Array.isArray(history)) {
-      console.error('History is not an array:', history);
-      return [];
-    }
-
-    return history
-      .filter((item): item is PagoItem => {
-        if (!item || !item.prestamo || !item.prestamo.member) {
-          console.warn('Invalid item found in history:', item);
-          return false;
-        }
-        return true;
-      })
-      .map(
-        (item): FormattedPago => ({
-          id: item.id,
-          amount: item.amount,
-          date: item.date,
-          prestamoId: item.prestamoId,
-          original_pago_id: item.original_pago_id,
-          affects_capital: item.affects_capital,
-          prestamo: item.prestamo,
-          memberName: item.prestamo.member.full_name,
-          fecha_pago: format(new Date(item.date), 'dd/MM/yyyy'),
-          capital_payment: item.amount,
-          interest_payment: item.prestamo.monthly_interest,
-          late_payment: 0,
-          quota_payment: item.amount,
-          remaining_balance: item.prestamo.remaining_amount,
-          remaining_installments: 0,
-        })
-      );
-  };
   useEffect(() => {
     if (loanStatus) {
       const loanStatusCheck = loanStatus as LoanStatus;
@@ -232,25 +203,6 @@ export default function PagosSection({ juntaId }: { juntaId: string }) {
     if (loanId) {
       fetchRemainingInstallmentsInfo(loanId);
     }
-    // if (history) {
-    //   if (memberId && loanId) {
-    //     const filteredPagosHistoryByMemberAndPrestamo = history.filter(
-    //       (pago: { memberId: string; prestamoId: string }) =>
-    //         pago.memberId === memberId && pago.prestamoId === prestamoId
-    //     );
-    //     setHistory(filteredPagosHistoryByMemberAndPrestamo);
-    //   } else if (memberId) {
-    //     const filteredPagosHistoryByMember = history.filter(
-    //       (pago: { memberId: string }) => pago.memberId === memberId
-    //     );
-    //     setHistory(filteredPagosHistoryByMember);
-    //   } else if (loanId) {
-    //     const filteredPagosHistoryByPrestamo = history.filter(
-    //       (pago: { prestamoId: string }) => pago.prestamoId === prestamoId
-    //     );
-    //     setHistory(filteredPagosHistoryByPrestamo);
-    //   }
-    // }
   };
 
   const handleCuotaCheck = (installment: Payment) => {

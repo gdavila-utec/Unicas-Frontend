@@ -28,17 +28,24 @@ import PagosSection from '@/components/PagosSection';
 // import AgendaSection from '@/components/AgendaSection';
 import { Ajustes } from '@/components/Ajustes';
 import { api } from '@/utils/api';
-import { useJuntaValues } from '@/store/juntaValues';
+import { useJuntaStore } from '@/store/juntaValues';
+import { useMemberStore } from '@/store/memberStore';
+import { useCapitalStore } from '@/store/useCapitalStore';
 import { Junta } from '@/types/index';
+import { set } from 'date-fns';
 
 const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
   const [isClient, setIsClient] = useState(false);
   // const [juntaLocal, setJuntaLocal] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { isAuthenticated, isAdmin, token } = useAuth();
-  const { setJunta, junta } = useJuntaValues();
-  const [capital, setCapital] = useState(null);
-  console.log('capital: ', capital);
+  const { setSelectedJunta } = useJuntaStore();
+  const { setMembers } = useMemberStore();
+  const { getAvailableCapital, updateAvailableCapital } = useCapitalStore();
+
+  const availableCapital = getAvailableCapital();
+  // const [capital, setCapital] = useState(null);
+
   // console.log('junta: ', junta);
   const router = useRouter();
 
@@ -51,10 +58,9 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
     try {
       // Using the api utility instead of direct fetch
       const data = await api.get(`juntas/${params.id}`);
-
-      setCapital(data.available_capital.toFixed(2));
-      // setJuntaLocal(data);
-      setJunta(data);
+      updateAvailableCapital(data);
+      setSelectedJunta(data);
+      setMembers(data.members);
     } catch (error) {
       console.error('Error fetching junta:', error);
     } finally {
@@ -87,7 +93,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
     { value: 'multas', label: 'Multas', icon: AlertTriangle },
     {
       value: 'acciones',
-      label: `Acciones ${capital ? 'S/.' + capital : ' '}`,
+      label: `Acciones ${availableCapital ? 'S/.' + availableCapital : ' '}`,
       icon: PiggyBank,
     },
     { value: 'pagos', label: 'Pagos', icon: CreditCard },

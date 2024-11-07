@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AddJuntaComponent } from '@/components/AddJuntaAltComponent';
 import GestionUsuarios from '@/components/GestionUsuarios';
 import { api, handleApiError } from '@/utils/api';
-import { useJuntaValues } from '@/store/juntaValues';
+// import { useJuntaValues } from '@/store/juntaValues';
 
 // Loading component
 const LoadingSpinner = () => (
@@ -97,7 +97,7 @@ const Home: React.FC = () => {
   const [view, setView] = useState<'crear-unica' | 'usuarios' | ''>('');
   const [isAddJuntaOpen, setIsAddJuntaOpen] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
-  const { setJunta } = useJuntaValues();
+  // const { setJunta } = useJuntaValues();
 
   const { isAdmin, role, isAuthenticated, token, user } = useAuthStore();
   const router = useRouter();

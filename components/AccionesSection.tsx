@@ -79,13 +79,6 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
     defaultInterestRate,
     loanFormValue,
   } = useBoardConfig();
-  // console.log('loanFormValue: ', loanFormValue);
-  // console.log('defaultInterestRate: ', defaultInterestRate);
-  // console.log('absenceFee: ', absenceFee);
-  // console.log('latePaymentFee: ', latePaymentFee);
-  // console.log('monthlyInterestRate: ', monthlyInterestRate);
-  // console.log('meetingDate: ', meetingDate);
-  // console.log('shareValue: ', shareValue);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -97,23 +90,23 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
     },
   });
 
-  // const fetchAcciones = async () => {
-  //   setIsLoading(true);
-  //   try {
-  //     const response = await api.get<Accion[]>(`acciones/junta/${juntaId}`);
-  //     setAcciones(Array.isArray(response) ? response : []);
-  //   } catch (error) {
-  //     console.error('Error fetching acciones:', error);
-  //     setError(error);
-  //     toast({
-  //       title: 'Error',
-  //       description: perro,
-  //       variant: 'destructive',
-  //     });
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
+  const fetchAcciones = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.get<Accion[]>(`acciones/junta/${juntaId}`);
+      setAcciones(Array.isArray(response) ? response : []);
+    } catch (error) {
+      console.error('Error fetching acciones:', error);
+      setError(error);
+      toast({
+        title: 'Error',
+        description: perro,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -260,7 +253,7 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                           )
                           .map((member) => (
                             <SelectItem
-                              key={member.user.id}
+                              key={member.id}
                               value={member.user.id}
                             >
                               {member.user.full_name ||

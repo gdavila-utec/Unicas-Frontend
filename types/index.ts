@@ -1,6 +1,7 @@
 import { unknown } from 'zod';
 
 export interface User {
+  user: any;
   id: string;
   email?: string;
   username: string;
@@ -100,6 +101,7 @@ export type AgendaItem = {
 
 // Junta types
 export interface Junta {
+  data: Partial<Junta>;
   id: string;
   name: string;
   description?: string;

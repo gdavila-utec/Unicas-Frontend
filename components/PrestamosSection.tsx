@@ -1,7 +1,9 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -17,73 +19,63 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
 import { useBoardConfig } from '@/store/configValues';
+import { Member, Prestamo, PaymentType, GuaranteeType, Junta } from '@/types';
+import { useJuntaStore } from '@/store/juntaValues';
+import { useCapitalStore } from '@/store/useCapitalStore';
 
-interface Member {
-  id: number;
-  full_name: string;
-}
+import { set } from 'date-fns';
 
-interface Prestamo {
-  id: number;
-  request_date: string;
-  amount: string;
-  monthly_interest: string;
-  number_of_installments: number;
-  approved: boolean;
-  rejected: boolean;
-  rejection_reason: string;
-  paid: boolean;
-  remaining_amount: string;
-  remaining_installments: number;
-  member: number;
-  member_name: string;
-  junta: number;
-  loan_type: string;
-  status: string;
-}
-
-interface NuevoPrestamoForm {
-  miembro: string;
-  fechaSolicitud: string;
-  montoSolicitado: number;
-  interesMensual: number;
-  cantidadCuotas: number;
-  tipoPrestamo: string;
+interface LoanFormData {
+  memberId: string;
+  requestDate: string;
+  amount: number;
+  monthlyInterest: number;
+  installments: number;
+  paymentType: string;
+  reason: string;
+  guaranteeType: GuaranteeType;
+  guaranteeDetail: string;
+  formPurchased: boolean;
 }
 
 const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
-  const { monthlyInterestRate } = useBoardConfig();
+  const { monthlyInterestRate, loanFormValue } = useBoardConfig();
   const { toast } = useToast();
   const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
+  const { setSelectedJunta, getJuntaById } = useJuntaStore();
+  const junta = getJuntaById(juntaId);
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [nuevoPrestamoForm, setNuevoPrestamoForm] = useState<NuevoPrestamoForm>(
-    {
-      miembro: '',
-      fechaSolicitud: '',
-      montoSolicitado: 0,
-      interesMensual: monthlyInterestRate,
-      cantidadCuotas: 0,
-      tipoPrestamo: 'Cuota a rebatir',
-    }
-  );
+  const { updateAvailableCapital } = useCapitalStore();
+  const [formData, setFormData] = useState<LoanFormData>({
+    memberId: '',
+    requestDate: new Date().toISOString().split('T')[0],
+    amount: 0,
+    monthlyInterest: monthlyInterestRate,
+    installments: 0,
+    paymentType: '',
+    reason: '',
+    guaranteeType: 'AVAL',
+    guaranteeDetail: '',
+    formPurchased: false,
+  });
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [membersData, prestamosData] = await Promise.all([
+      const [membersData, prestamosData, juntaData] = await Promise.all([
         api.get<Member[]>(`members/junta/${juntaId}`),
         api.get<Prestamo[]>(`prestamos/junta/${juntaId}`),
+        api.get<Junta>(`juntas/${juntaId}`),
       ]);
       setMembers(membersData);
-      console.log('membersData: ', membersData);
       setPrestamos(prestamosData);
-      console.log('prestamosData: ', prestamosData);
+      setSelectedJunta(juntaData);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -102,41 +94,49 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
   }, [juntaId]);
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ): void => {
-    const { name, value } = e.target;
-    setNuevoPrestamoForm((prev) => ({ ...prev, [name]: value }));
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value, type } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'number' ? parseFloat(value) : value,
+    }));
   };
 
-  const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>
-  ): Promise<void> => {
+  const handleGuaranteeTypeChange = (
+    value: 'AVAL' | 'INMUEBLE' | 'HIPOTECARIA' | 'PRENDARIA'
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      guaranteeType: value,
+      guaranteeDetail: '', // Reset detail when type changes
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const prestamoData = {
-        request_date: nuevoPrestamoForm.fechaSolicitud,
-        amount: nuevoPrestamoForm.montoSolicitado.toString(),
-        monthly_interest: nuevoPrestamoForm.interesMensual.toString(),
-        number_of_installments: nuevoPrestamoForm.cantidadCuotas,
-        remaining_amount: nuevoPrestamoForm.montoSolicitado,
-        remaining_installments: nuevoPrestamoForm.cantidadCuotas,
-        member: parseInt(nuevoPrestamoForm.miembro),
-        junta: parseInt(juntaId),
-        loan_type: nuevoPrestamoForm.tipoPrestamo,
+      const payload = {
+        juntaId,
+        memberId: formData.memberId,
+        request_date: formData.requestDate,
+        amount: formData.amount.toString(),
+        monthly_interest: formData.monthlyInterest.toString(),
+        number_of_installments: formData.installments,
+        loan_type: formData.paymentType,
+        reason: formData.reason,
+        guarantee_type: formData.guaranteeType,
+        guarantee_detail: formData.guaranteeDetail,
+        form_purchased: formData.formPurchased,
+        payment_type: 'MENSUAL' as PaymentType,
       };
+      console.log('payload: ', payload);
 
-      await api.post('prestamos', prestamoData);
+      await api.post('prestamos', payload);
       await fetchData();
-
-      setNuevoPrestamoForm({
-        miembro: '',
-        fechaSolicitud: '',
-        montoSolicitado: 0,
-        interesMensual: 0,
-        cantidadCuotas: 0,
-        tipoPrestamo: 'Cuota a rebatir',
-      });
-
+      updateAvailableCapital(junta);
       toast({
         title: 'Éxito',
         description: 'Préstamo registrado correctamente',
@@ -153,7 +153,13 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
     }
   };
 
-  const handleDelete = async (id: number): Promise<void> => {
+  if (isLoading) {
+    return (
+      <div className='flex justify-center items-center p-8'>Cargando...</div>
+    );
+  }
+
+  const handleDeleteLoan = async (id: string) => {
     try {
       await api.delete(`prestamos/${id}`);
       await fetchData();
@@ -171,176 +177,256 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className='flex justify-center items-center p-8'>Cargando...</div>
-    );
-  }
-
   return (
     <div className='space-y-8'>
       <Card>
         <CardHeader>
-          <h2 className='text-2xl font-bold'>Agregar Préstamo</h2>
+          <CardTitle>Registro de Préstamos</CardTitle>
         </CardHeader>
         <CardContent>
           <form
             onSubmit={handleSubmit}
-            className='space-y-4'
+            className='space-y-6'
           >
-            <div className='grid grid-cols-2 gap-4'>
-              <div>
-                <Label>Miembro</Label>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+              {/* Member Selection and Request Date */}
+              <div className='space-y-2'>
+                <Label>Seleccionar Miembro</Label>
                 <Select
-                  value={nuevoPrestamoForm.miembro}
+                  value={formData.memberId}
                   onValueChange={(value) =>
-                    handleInputChange({
-                      target: { name: 'miembro', value },
-                    } as React.ChangeEvent<HTMLSelectElement>)
+                    setFormData((prev) => ({ ...prev, memberId: value }))
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder='Seleccionar miembro' />
                   </SelectTrigger>
                   <SelectContent>
-                    {members.length > 0 ? (
-                      members.map((member) => (
-                        <SelectItem
-                          key={member.id}
-                          value={member.id.toString()}
-                        >
-                          {member.full_name}
-                        </SelectItem>
-                      ))
-                    ) : (
+                    {members.map((member) => (
                       <SelectItem
-                        value='No members'
-                        disabled
+                        key={member.id}
+                        value={member.id}
                       >
-                        No hay socios disponibles
+                        {member.full_name}
                       </SelectItem>
-                    )}
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label htmlFor='fechaSolicitud'>Fecha de Solicitud</Label>
+
+              <div className='space-y-2'>
+                <Label htmlFor='requestDate'>Fecha de Solicitud</Label>
                 <Input
                   type='date'
-                  id='fechaSolicitud'
-                  name='fechaSolicitud'
-                  value={nuevoPrestamoForm.fechaSolicitud}
+                  id='requestDate'
+                  name='requestDate'
+                  value={formData.requestDate}
                   onChange={handleInputChange}
                 />
               </div>
-              <div>
-                <Label htmlFor='montoSolicitado'>Monto Solicitado</Label>
+
+              {/* Amount and Interest */}
+              <div className='space-y-2'>
+                <Label htmlFor='amount'>Monto Solicitado</Label>
                 <Input
                   type='number'
-                  id='montoSolicitado'
-                  name='montoSolicitado'
-                  value={nuevoPrestamoForm.montoSolicitado}
+                  id='amount'
+                  name='amount'
+                  value={formData.amount}
                   onChange={handleInputChange}
                 />
               </div>
-              <div>
-                <Label htmlFor='interesMensual'>Interés Mensual</Label>
+
+              <div className='space-y-2'>
+                <Label htmlFor='monthlyInterest'>Interés Mensual (%)</Label>
                 <Input
                   type='number'
-                  id='interesMensual'
-                  name='interesMensual'
-                  value={nuevoPrestamoForm.interesMensual}
-                  onChange={handleInputChange}
+                  id='monthlyInterest'
+                  name='monthlyInterest'
+                  value={formData.monthlyInterest}
+                  disabled
                 />
               </div>
-              <div>
-                <Label htmlFor='cantidadCuotas'>Cantidad de Cuotas</Label>
+
+              {/* Installments and Payment Type */}
+              <div className='space-y-2'>
+                <Label htmlFor='installments'>Cantidad de Cuotas (meses)</Label>
                 <Input
                   type='number'
-                  id='cantidadCuotas'
-                  name='cantidadCuotas'
-                  value={nuevoPrestamoForm.cantidadCuotas}
+                  id='installments'
+                  name='installments'
+                  value={formData.installments}
                   onChange={handleInputChange}
                 />
               </div>
-              <div>
-                <Label htmlFor='tipoPrestamo'>Tipo de Préstamo</Label>
+
+              <div className='space-y-2'>
+                <Label>Forma de Pago</Label>
                 <Select
-                  value={nuevoPrestamoForm.tipoPrestamo}
+                  value={formData.paymentType}
                   onValueChange={(value) =>
-                    handleInputChange({
-                      target: { name: 'tipoPrestamo', value },
-                    } as React.ChangeEvent<HTMLSelectElement>)
+                    setFormData((prev) => ({ ...prev, paymentType: value }))
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder='Seleccionar tipo de préstamo' />
+                    <SelectValue placeholder='Seleccionar forma de pago' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='Cuota a rebatir'>
+                    <SelectItem value='CUOTA_REBATIR'>
                       Cuota a rebatir
                     </SelectItem>
-                    <SelectItem value='Cuota fija'>Cuota fija</SelectItem>
-                    <SelectItem value='Cuota a vencimiento'>
-                      Cuota a vencimiento
+                    <SelectItem value='CUOTA_FIJA'>Cuota fija</SelectItem>
+                    <SelectItem value='CUOTA_VENCIMIENTO'>
+                      Cuota al vencimiento
                     </SelectItem>
-                    <SelectItem value='Cuota variable'>
+                    <SelectItem value='CUOTA_VARIABLE'>
                       Cuota variable
                     </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Reason */}
+              <div className='col-span-2'>
+                <Label htmlFor='reason'>Motivo</Label>
+                <Textarea
+                  id='reason'
+                  name='reason'
+                  value={formData.reason}
+                  onChange={handleInputChange}
+                  rows={3}
+                />
+              </div>
+
+              {/* Guarantee Type and Detail */}
+              <div className='space-y-2'>
+                <Label>Tipo de Garantía</Label>
+                <Select
+                  value={formData.guaranteeType}
+                  onValueChange={handleGuaranteeTypeChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder='Seleccionar tipo de garantía' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='AVAL'>Aval</SelectItem>
+                    <SelectItem value='INMUEBLE'>Inmueble</SelectItem>
+                    <SelectItem value='HIPOTECARIA'>Hipotecaria</SelectItem>
+                    <SelectItem value='PRENDARIA'>Prendaria</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className='space-y-2'>
+                <Label>Garantía</Label>
+                {formData.guaranteeType === 'AVAL' ? (
+                  <Select
+                    value={formData.guaranteeDetail}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        guaranteeDetail: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder='Seleccionar aval' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {members
+                        .filter((member) => member.id !== formData.memberId)
+                        .map((member) => (
+                          <SelectItem
+                            key={member.id}
+                            value={member.id}
+                          >
+                            {member.full_name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    name='guaranteeDetail'
+                    value={formData.guaranteeDetail}
+                    onChange={handleInputChange}
+                    placeholder='Detalles de la garantía'
+                  />
+                )}
+              </div>
             </div>
-            <Button type='submit'>Agregar Préstamo</Button>
+
+            {/* Form Purchase Checkbox */}
+            <div className='flex items-center space-x-2'>
+              <Checkbox
+                id='formPurchased'
+                checked={formData.formPurchased}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    formPurchased: checked as boolean,
+                  }))
+                }
+              />
+              <Label htmlFor='formPurchased'>
+                Compró formulario S/ {loanFormValue}
+              </Label>
+            </div>
+
+            <Button type='submit'>Registrar Préstamo</Button>
           </form>
         </CardContent>
       </Card>
 
+      {/* Loans Table */}
       <Card>
         <CardHeader>
-          <h2 className='text-2xl font-bold'>Préstamos Activos</h2>
+          <CardTitle>Lista de Préstamos</CardTitle>
         </CardHeader>
         <CardContent>
-          {prestamos.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Miembro</TableHead>
-                  <TableHead>Monto Original</TableHead>
-                  <TableHead>Monto Adeudado</TableHead>
-                  <TableHead>Cuotas Pendientes</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Opciones</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>N°</TableHead>
+                <TableHead>Cod préstamo</TableHead>
+                <TableHead>Nombre completo (Socio)</TableHead>
+                <TableHead>Fecha de inicio</TableHead>
+                <TableHead>Monto solicitado</TableHead>
+                <TableHead>Tasa de Interes</TableHead>
+                <TableHead>Cuotas</TableHead>
+                <TableHead>Forma de pago</TableHead>
+                <TableHead>Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {/* {loan.loan_number} - {loan.loan_code} - {loan.loan_type} -{' '}
+              {loan.amount} soles - {loan.number_of_installments} */}
+              {prestamos.map((prestamo, index) => (
+                <TableRow key={prestamo.id}>
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>
+                    {prestamo.loan_code}-{prestamo.loan_number}
+                  </TableCell>
+                  <TableCell>{prestamo.member.full_name}</TableCell>
+                  <TableCell>
+                    {new Date(prestamo.request_date).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>S/ {prestamo.amount}</TableCell>
+                  <TableCell>{prestamo.monthly_interest}%</TableCell>
+                  <TableCell>{prestamo.number_of_installments}</TableCell>
+                  <TableCell>{prestamo.loan_type}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant='destructive'
+                      onClick={() => handleDeleteLoan(prestamo.id)}
+                    >
+                      Eliminar
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {prestamos.map((prestamo) => (
-                  <TableRow key={prestamo.id}>
-                    <TableCell>{prestamo.member_name}</TableCell>
-                    <TableCell>S/.{prestamo.amount}</TableCell>
-                    <TableCell>S/.{prestamo.remaining_amount}</TableCell>
-                    <TableCell>{prestamo.remaining_installments}</TableCell>
-                    <TableCell>{prestamo.status}</TableCell>
-                    <TableCell>
-                      <div className='flex space-x-2'>
-                        <Button
-                          variant='destructive'
-                          size='sm'
-                          onClick={() => handleDelete(prestamo.id)}
-                        >
-                          <Trash2 className='h-4 w-4' />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className='text-center py-4'>
-              No hay préstamos registrados.
-            </div>
-          )}
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>

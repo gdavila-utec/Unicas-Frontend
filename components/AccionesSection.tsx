@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -36,9 +36,13 @@ import { CalendarIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useError } from '@/hooks/useError';
-import { api } from '@/utils/api';
-import { Accion, Member } from '@/types';
+import { api, handleApiError } from '@/utils/api';
+import { Accion, Member, Junta } from '@/types';
 import { useBoardConfig } from '@/store/configValues';
+import { useAccionesStore } from '@/store/accionesStore';
+import { useJuntaStore } from '@/store/juntaValues';
+import { useMemberStore } from '@/store/memberStore';
+import { useCapitalStore } from '@/store/useCapitalStore';
 
 interface AccionesSectionProps {
   juntaId: string;
@@ -55,10 +59,16 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function AccionesSection({ juntaId }: AccionesSectionProps) {
   const { perro, setError } = useError();
-  const [acciones, setAcciones] = useState<Accion[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
-  console.log('members: ', members);
   const [loading, setIsLoading] = useState(false);
+  const { getJuntaAcciones, setAcciones } = useAccionesStore();
+  const { setSelectedJunta } = useJuntaStore();
+  const { getJuntaMembers } = useMemberStore();
+  const members = useMemo(() => getJuntaMembers() ?? [], [getJuntaMembers]);
+  const acciones = useMemo(
+    () => getJuntaAcciones(juntaId),
+    [getJuntaAcciones, juntaId]
+  );
+  const { updateAvailableCapital } = useCapitalStore();
   const { toast } = useToast();
   const {
     shareValue,
@@ -69,13 +79,6 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
     defaultInterestRate,
     loanFormValue,
   } = useBoardConfig();
-  console.log('loanFormValue: ', loanFormValue);
-  console.log('defaultInterestRate: ', defaultInterestRate);
-  console.log('absenceFee: ', absenceFee);
-  console.log('latePaymentFee: ', latePaymentFee);
-  console.log('monthlyInterestRate: ', monthlyInterestRate);
-  console.log('meetingDate: ', meetingDate);
-  console.log('shareValue: ', shareValue);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -105,13 +108,21 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
     }
   };
 
-  const fetchMembers = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await api.get<Member[]>(`members/junta/${juntaId}`);
-      setMembers(Array.isArray(response) ? response : []);
+      // Fetch acciones
+      const response = await api.get<Accion[]>(`acciones/junta/${juntaId}`);
+      setAcciones(Array.isArray(response) ? response : []);
+
+      // Fetch junta
+      const juntaData = await api.get(`juntas/${juntaId}`);
+      console.log('juntaData: ', juntaData);
+
+      // Update fondo social
+      updateAvailableCapital(juntaData);
     } catch (error) {
-      console.error('Error fetching members:', error);
+      console.error('Error fetching data:', error);
       setError(error);
       toast({
         title: 'Error',
@@ -121,18 +132,43 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [juntaId, setAcciones, setSelectedJunta, setError]);
 
   useEffect(() => {
-    fetchMembers();
-    fetchAcciones();
-  }, [juntaId]);
+    fetchData();
+  }, [fetchData]);
+
+  // Fetch juntas when view is set to admin
+
+  // const fetchMembers = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     const response = await api.get<Member[]>(`members/junta/${juntaId}`);
+  //     setMembers(Array.isArray(response) ? response : []);
+  //   } catch (error) {
+  //     console.error('Error fetching members:', error);
+  //     setError(error);
+  //     toast({
+  //       title: 'Error',
+  //       description: perro,
+  //       variant: 'destructive',
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   fetchMembers();
+  //   fetchAcciones();
+  // }, [juntaId]);
 
   const onSubmit = async (values: FormValues) => {
     try {
       const jsonBody: Partial<Accion> = {
         type: 'COMPRA',
         amount: values.amount,
+        shareValue: shareValue,
         description: `Compra de acciones por ${
           values.amount
         } acciones el dia ${format(values.date, 'yyyy-MM-dd')}`,
@@ -141,7 +177,7 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
       };
 
       await api.post('acciones', jsonBody);
-      await fetchAcciones();
+      await fetchData();
 
       toast({
         title: 'Success',
@@ -161,6 +197,26 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
   };
 
   if (loading) return <div>Loading...</div>;
+
+  const handleDeleteAcciones = async (id: string) => {
+    try {
+      await api.delete(`acciones/${id}`);
+      await fetchData();
+
+      toast({
+        title: 'Success',
+        description: 'Accion eliminada exitosamente',
+      });
+    } catch (error) {
+      console.error('Error deleting accion:', error);
+      setError(error);
+      toast({
+        title: 'Error',
+        description: perro,
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <div className='space-y-8 p-6'>
@@ -191,16 +247,20 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {members.map((member) => (
-                          <SelectItem
-                            key={member.id}
-                            value={member.id}
-                          >
-                            {member.full_name ||
-                              member.username ||
-                              'Usuario sin nombre'}
-                          </SelectItem>
-                        ))}
+                        {members
+                          .filter(
+                            (member) => member.user.member_role === 'socio'
+                          )
+                          .map((member) => (
+                            <SelectItem
+                              key={member.id}
+                              value={member.user.id}
+                            >
+                              {member.user.full_name ||
+                                member.user.username ||
+                                'Usuario sin nombre'}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </FormItem>
@@ -326,6 +386,14 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                   </TableCell>
                   <TableCell>{accion.amount}</TableCell>
                   <TableCell>{accion.amount * shareValue}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant='destructive'
+                      onClick={() => handleDeleteAcciones(accion.id)}
+                    >
+                      Eliminar
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
               <TableRow>

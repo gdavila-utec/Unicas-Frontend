@@ -12,12 +12,18 @@ export interface Junta {
   id: number;
   name: string;
   description: string;
-  date: string;
+  fecha_inicio: string;
   total_shares: number;
   share_value: number;
   duration_months: number;
   current_month: number;
-  members: string[];
+  available_capital: number;
+  base_capital: number;
+  createdAt: string;
+  createdBy: User;
+  createdById: string;
+  updatedAt: string;
+  members: User[];
   // Add other junta properties as needed
 }
 

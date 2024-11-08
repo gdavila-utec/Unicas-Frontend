@@ -156,6 +156,7 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
+  console.log('members: ', members);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
@@ -248,7 +249,9 @@ const MemberSection = ({ juntaId }: { juntaId: string }) => {
     setIsLoading(true);
     try {
       const response = await api.get<Member[]>(`members/junta/${juntaId}`);
-      setMembers(Array.isArray(response) ? response : []);
+      const members = response.filter((m) => m.member_role === 'socio');
+
+      setMembers(Array.isArray(members) ? members : []);
     } catch (error) {
       console.error('Error fetching members:', error);
       setError(error);

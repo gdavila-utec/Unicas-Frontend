@@ -1,4 +1,5 @@
-import { Button } from '@/components/ui/button';
+import React from 'react';
+import { format } from 'date-fns';
 import {
   Table,
   TableBody,
@@ -7,75 +8,37 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useEffect, useState, ReactNode, useMemo } from 'react';
-import { format, set } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
-import { api } from '@/utils/api';
-import { Junta, Member, Prestamo, Accion, PaymentHistory } from '@/types';
-import { useJuntaStore } from '@/store/juntaValues';
-import { usePrestamoStore } from '@/store/prestamoStore';
-import { useAccionesStore } from '@/store/accionesStore';
-import { useMemberStore } from '@/store/memberStore';
-import { usePagosStore } from '@/store/pagosStore';
+import { useResumen } from '@/hooks/useResumenSection';
 
-const ResumenSection = ({
-  juntaId,
-}: // junta,
-{
+interface ResumenSectionProps {
   juntaId: string;
-  // juntaLocal: Junta;
-}) => {
-  const { setPaymentSchedules, getLoanSchedule, setLoans, getJuntaLoans } =
-    usePrestamoStore();
-  const { setAcciones, getJuntaAcciones } = useAccionesStore();
-  const { getCapitalAmounts, getJuntaById, getMembers } = useJuntaStore();
-  const { setMembers, getJuntaMembers } = useMemberStore();
-  const { setPayments } = usePagosStore();
-  const members = getJuntaMembers() ?? [];
+}
 
-  const loans = getJuntaLoans(juntaId);
-  const acciones = getJuntaAcciones(juntaId);
-  const capital = getCapitalAmounts(juntaId);
-  // const selectedJuntaData = setSelectedJunta();
-  const { isAuthenticated, isAdmin } = useAuth();
-  const router = useRouter();
-  useEffect(() => {
-    const capital = getCapitalAmounts(juntaId);
+const ResumenSection: React.FC<ResumenSectionProps> = ({ juntaId }) => {
+  const { isAuthenticated } = useAuth();
+  const { members, loans, acciones, payments, capital, isLoading, error } =
+    useResumen(juntaId);
 
-    const fetchData = async () => {
-      if (!isAuthenticated) {
-        return;
-      }
+  if (!isAuthenticated) return null;
 
-      try {
-        const [loansData, accionesData, historialPagos] = await Promise.all([
-          api.get<Prestamo[]>(`prestamos/junta/${juntaId}`),
-          api.get<Accion[]>(`acciones/junta/${juntaId}`),
-          api.get<PaymentHistory[]>(`junta-payments/${juntaId}/history`),
-        ]);
-        setLoans(loansData);
-        // setMembers(junta.members);
-        setAcciones(accionesData);
-        setPayments(historialPagos);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        if (error instanceof Error && error.message === 'Session expired') {
-          router.push('/sign-in');
-        }
-      }
-    };
+  if (isLoading) {
+    return (
+      <div className='flex justify-center items-center p-8'>
+        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900' />
+      </div>
+    );
+  }
 
-    fetchData();
-  }, [juntaId, isAuthenticated, router]);
-
-  if (!isAuthenticated) {
-    return null;
+  if (error) {
+    return <div className='text-red-500 p-4'>Error: {error.message}</div>;
   }
 
   return (
     <div className='space-y-8'>
       <h2 className='text-2xl font-bold mb-4'>Resumen de Junta</h2>
+
+      {/* Members Section */}
       <div>
         <h3 className='text-xl font-semibold'>Lista de Socios</h3>
         <Table>
@@ -87,16 +50,14 @@ const ResumenSection = ({
           </TableHeader>
           <TableBody>
             {members.length > 0 ? (
-              members
-                .filter((member) => member.user.member_role === 'socio')
-                .map((member) => (
-                  <TableRow key={member.id}>
-                    <TableCell>{member.user.full_name}</TableCell>
-                    <TableCell>
-                      {member.user.document_type}: {member.user.document_number}
-                    </TableCell>
-                  </TableRow>
-                ))
+              members.map((member) => (
+                <TableRow key={member.id}>
+                  <TableCell>{member.full_name}</TableCell>
+                  <TableCell>
+                    {member.document_type}: {member.document_number}
+                  </TableCell>
+                </TableRow>
+              ))
             ) : (
               <TableRow>
                 <TableCell colSpan={2}>No hay socios registrados</TableCell>
@@ -106,6 +67,7 @@ const ResumenSection = ({
         </Table>
       </div>
 
+      {/* Loans Section */}
       <div>
         <h3 className='text-xl font-semibold'>Préstamos Activos</h3>
         <Table>
@@ -118,12 +80,12 @@ const ResumenSection = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(loans ?? []).length > 0 ? (
+            {loans.length > 0 ? (
               loans.map((loan) => (
                 <TableRow key={loan.id}>
                   <TableCell>{loan.member.full_name}</TableCell>
-                  <TableCell>${loan.amount}</TableCell>
-                  <TableCell>${loan.remaining_amount}</TableCell>
+                  <TableCell>S/.{loan.amount}</TableCell>
+                  <TableCell>S/.{loan.remaining_amount}</TableCell>
                   <TableCell>
                     {(loan.paymentSchedule ?? []).filter(
                       (payment) => payment.status !== 'PAID'
@@ -145,34 +107,7 @@ const ResumenSection = ({
         </Table>
       </div>
 
-      <div>
-        <h3 className='text-xl font-semibold'>Historial de Multas</h3>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Miembro</TableHead>
-              <TableHead>Descripción</TableHead>
-              <TableHead>Monto</TableHead>
-            </TableRow>
-          </TableHeader>
-          {/* <TableBody>
-            {multas.length > 0 ? (
-              multas.map((multa) => (
-                <TableRow key={multa.id}>
-                  <TableCell>{multa.member_name}</TableCell>
-                  <TableCell>{multa.reason}</TableCell>
-                  <TableCell>S/.{multa.amount}</TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={3}>No hay multas registradas</TableCell>
-              </TableRow>
-            )}
-          </TableBody> */}
-        </Table>
-      </div>
-
+      {/* Acciones Section */}
       <div>
         <h3 className='text-xl font-semibold'>Acciones Compradas</h3>
         <Table>
@@ -185,7 +120,7 @@ const ResumenSection = ({
           </TableHeader>
           <TableBody>
             {acciones.length > 0 ? (
-              acciones.map((accion: any) => (
+              acciones.map((accion) => (
                 <TableRow key={accion.id}>
                   <TableCell>{accion.member.full_name}</TableCell>
                   <TableCell>{accion.amount}</TableCell>
@@ -201,6 +136,7 @@ const ResumenSection = ({
         </Table>
       </div>
 
+      {/* Payments Section */}
       <div>
         <h3 className='text-xl font-semibold'>Historial de Pagos</h3>
         <Table>
@@ -209,11 +145,12 @@ const ResumenSection = ({
               <TableHead>Miembro</TableHead>
               <TableHead>Monto</TableHead>
               <TableHead>Fecha</TableHead>
+              <TableHead>Estado</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loans.length > 0 ? (
-              loans.map((loan) =>
+              loans.flatMap((loan) =>
                 loan.paymentSchedule.map((payment) => (
                   <TableRow key={payment.id}>
                     <TableCell>{loan.member.full_name}</TableCell>
@@ -221,33 +158,38 @@ const ResumenSection = ({
                       S/.{payment.expected_amount.toFixed(2)}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(payment.due_date), 'yyyy-MM-dd')}
+                      {format(new Date(payment.due_date), 'dd/MM/yyyy')}
                     </TableCell>
                     <TableCell>
-                      {payment.status === 'PAID' ? (
-                        <span className='text-green-500'>Pagado</span>
-                      ) : (
-                        <span className='text-red-500'>Pendiente</span>
-                      )}
+                      <span
+                        className={
+                          payment.status === 'PAID'
+                            ? 'text-green-500'
+                            : 'text-red-500'
+                        }
+                      >
+                        {payment.status === 'PAID' ? 'Pagado' : 'Pendiente'}
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))
               )
             ) : (
               <TableRow>
-                <TableCell colSpan={3}>No hay pagos registrados</TableCell>
+                <TableCell colSpan={4}>No hay pagos registrados</TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
 
+      {/* Capital Section */}
       <div>
         <h3 className='text-xl font-semibold'>Capital Social</h3>
         {capital ? (
           <>
-            <p>Reserva Legal: S/{capital.base}</p>
-            <p>Fondo Social: S/.{capital.available}</p>
+            <p>Reserva Legal: S/.{capital.base.toFixed(2)}</p>
+            <p>Fondo Social: S/.{capital.available.toFixed(2)}</p>
           </>
         ) : (
           <p>No hay datos de capital disponibles</p>

@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -8,97 +8,60 @@ import {
   User,
   DollarSign,
   AlertTriangle,
-  TrendingUp,
-  CreditCard,
-  Calendar,
-  Settings,
   PiggyBank,
+  CreditCard,
+  Settings,
+  DollarSignIcon,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useJuntaDashboard } from '@/hooks/useJuntaDashboard';
 import ResumenSection from '@/components/ResumenSection';
 import MemberSection from '@/components/MemberSection';
 import PrestamosSection from '@/components/PrestamosSection';
 import MultaSection from '@/components/MultasSection';
 import AcccionesSection from '@/components/AccionesSection';
 import PagosSection from '@/components/PagosSection';
-// import AgendaSection from '@/components/AgendaSection';
 import { Ajustes } from '@/components/Ajustes';
-import { api } from '@/utils/api';
-import { useJuntaStore } from '@/store/juntaValues';
-import { useMemberStore } from '@/store/memberStore';
-import { useCapitalStore } from '@/store/useCapitalStore';
-import { Junta } from '@/types/index';
-import { set } from 'date-fns';
 
 const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
   const [isClient, setIsClient] = useState(false);
-  // const [juntaLocal, setJuntaLocal] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { isAuthenticated, isAdmin, token } = useAuth();
-  const { setSelectedJunta } = useJuntaStore();
-  const { setMembers } = useMemberStore();
-  const { getAvailableCapital, updateAvailableCapital } = useCapitalStore();
-
-  const availableCapital = getAvailableCapital();
-  // const [capital, setCapital] = useState(null);
-
-  // console.log('junta: ', junta);
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
 
-  const handleGetJunta = async () => {
-    if (!isAdmin || !isAuthenticated) {
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Using the api utility instead of direct fetch
-      const data = await api.get(`juntas/${params.id}`);
-      updateAvailableCapital(data);
-      setSelectedJunta(data);
-      setMembers(data.members);
-    } catch (error) {
-      console.error('Error fetching junta:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { junta, members, isLoading, isError, availableCapital, refetch } =
+    useJuntaDashboard(params.id);
+  useEffect(() => {
+    console.log('refetching params.id: ', params.id);
+    refetch();
+  }, [params.id]);
 
   useEffect(() => {
     setIsClient(true);
-    handleGetJunta();
   }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/sign-in');
-      return;
     }
-
-    // if (isAuthenticated) {
-    //   handleGetJunta();
-    // }
-  }, [isAuthenticated, params.id]);
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) return null;
 
   const tabItems = [
     { value: 'resumen', label: 'Resumen', icon: Home },
     { value: 'socios', label: 'Socios', icon: User },
-    { value: 'prestamos', label: 'Préstamos', icon: DollarSign },
+    { value: 'prestamos', label: 'Préstamos', icon: DollarSignIcon },
     { value: 'multas', label: 'Multas', icon: AlertTriangle },
     {
       value: 'acciones',
-      label: `Acciones ${availableCapital ? 'S/.' + availableCapital : ' '}`,
+      label: 'Acciones',
       icon: PiggyBank,
     },
     { value: 'pagos', label: 'Pagos', icon: CreditCard },
-    // { value: 'agenda', label: 'Agenda', icon: Calendar },
-
     { value: 'config', label: '', icon: Settings },
   ];
 
@@ -107,11 +70,26 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
       <Card className='mb-6 shadow-lg'>
         <CardHeader className='bg-primary text-primary-foreground'>
           <div className='flex items-center justify-between'>
-            <CardTitle className='text-2xl sm:text-3xl font-bold'>
-              <span>UNICA Vecinal Dashboard</span>
-
-              <span className='text-sm sm:text-base font-normal text-white ml-40'></span>
+            <CardTitle className='text-2xl sm:text-3xl font-bold flex gap-4'>
+              <span className=''>UNICA Vecinal Dashboard</span>
+              {/* <span className=' sm:text-base font-normal  text-sm font-bold bg-white text-gray-900 px-4 py-2  rounded ml-40'>
+                {availableCapital
+                  ? 'S/.' + availableCapital.toFixed(2)
+                  : 'S/. 0.00 '}
+              </span> */}
             </CardTitle>
+            <Link href='/'>
+              <Button
+                variant='secondary'
+                size='sm'
+                className='hidden sm:flex items-center gap-2 rounded-md'
+              >
+                Efectivo disponible:{' '}
+                {availableCapital
+                  ? 'S/.' + availableCapital.toFixed(2)
+                  : 'S/. 0.00 '}
+              </Button>
+            </Link>
             <Link href='/'>
               <Button
                 variant='secondary'
@@ -129,9 +107,10 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
             <Skeleton className='h-8 w-2/3 mb-4' />
           ) : (
             <h2 className='text-xl font-semibold mb-4'>
-              {/* {junta ? junta?.name : 'No junta encontrada'} */}
+              {junta ? junta.name : 'No junta encontrada'}
             </h2>
           )}
+
           <Tabs
             defaultValue='resumen'
             className='w-full'
@@ -148,13 +127,11 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
                 </TabsTrigger>
               ))}
             </TabsList>
+
             <Card className='bg-white shadow-sm'>
               <CardContent className='p-4 sm:p-6'>
                 <TabsContent value='resumen'>
-                  <ResumenSection
-                    juntaId={params.id}
-                    // juntaLocal={juntaLocal}
-                  />
+                  <ResumenSection juntaId={params.id} />
                 </TabsContent>
                 <TabsContent value='socios'>
                   <MemberSection juntaId={params.id} />
@@ -171,9 +148,6 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
                 <TabsContent value='pagos'>
                   <PagosSection juntaId={params.id} />
                 </TabsContent>
-                {/* <TabsContent value='agenda'>
-                  <AgendaSection juntaId={params.id} />
-                </TabsContent> */}
                 <TabsContent value='config'>
                   <Ajustes />
                 </TabsContent>

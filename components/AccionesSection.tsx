@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -20,6 +20,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
 } from '@/components/ui/select';
 import {
   Table,
@@ -28,195 +29,36 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from '@/components/ui/table';
-import { useToast } from '@/hooks/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-import { useError } from '@/hooks/useError';
-import { api, handleApiError } from '@/utils/api';
-import { Accion, Member, Junta } from '@/types';
-import { useBoardConfig } from '@/store/configValues';
-import { useAccionesStore } from '@/store/accionesStore';
-import { useJuntaStore } from '@/store/juntaValues';
-import { useMemberStore } from '@/store/memberStore';
-import { useCapitalStore } from '@/store/useCapitalStore';
+import { useAccionesSection } from '@/hooks/useAccionesSection';
 
 interface AccionesSectionProps {
   juntaId: string;
 }
 
-const formSchema = z.object({
-  memberId: z.string().min(1, { message: 'Miembro requerido' }),
-  date: z.date(),
-  amount: z.number().min(1, { message: 'La cantidad debe ser mayor a 0' }),
-  description: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
 export default function AccionesSection({ juntaId }: AccionesSectionProps) {
-  const { perro, setError } = useError();
-  const [loading, setIsLoading] = useState(false);
-  const { getJuntaAcciones, setAcciones } = useAccionesStore();
-  const { setSelectedJunta } = useJuntaStore();
-  const { getJuntaMembers } = useMemberStore();
-  const members = useMemo(() => getJuntaMembers() ?? [], [getJuntaMembers]);
-  const acciones = useMemo(
-    () => getJuntaAcciones(juntaId),
-    [getJuntaAcciones, juntaId]
-  );
-  const { updateAvailableCapital } = useCapitalStore();
-  const { toast } = useToast();
   const {
+    form,
+    acciones,
+    members,
+    isLoading,
     shareValue,
-    meetingDate,
-    monthlyInterestRate,
-    latePaymentFee,
-    absenceFee,
-    defaultInterestRate,
-    loanFormValue,
-  } = useBoardConfig();
+    onSubmit,
+    handleDeleteAcciones,
+    totalShares,
+    totalValue,
+  } = useAccionesSection(juntaId);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      memberId: '',
-      date: new Date(),
-      amount: 0,
-      description: '',
-    },
-  });
-
-  const fetchAcciones = async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.get<Accion[]>(`acciones/junta/${juntaId}`);
-      setAcciones(Array.isArray(response) ? response : []);
-    } catch (error) {
-      console.error('Error fetching acciones:', error);
-      setError(error);
-      toast({
-        title: 'Error',
-        description: perro,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      // Fetch acciones
-      const response = await api.get<Accion[]>(`acciones/junta/${juntaId}`);
-      setAcciones(Array.isArray(response) ? response : []);
-
-      // Fetch junta
-      const juntaData = await api.get(`juntas/${juntaId}`);
-      console.log('juntaData: ', juntaData);
-
-      // Update fondo social
-      updateAvailableCapital(juntaData);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setError(error);
-      toast({
-        title: 'Error',
-        description: perro,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [juntaId, setAcciones, setSelectedJunta, setError]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // Fetch juntas when view is set to admin
-
-  // const fetchMembers = async () => {
-  //   setIsLoading(true);
-  //   try {
-  //     const response = await api.get<Member[]>(`members/junta/${juntaId}`);
-  //     setMembers(Array.isArray(response) ? response : []);
-  //   } catch (error) {
-  //     console.error('Error fetching members:', error);
-  //     setError(error);
-  //     toast({
-  //       title: 'Error',
-  //       description: perro,
-  //       variant: 'destructive',
-  //     });
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
-  // useEffect(() => {
-  //   fetchMembers();
-  //   fetchAcciones();
-  // }, [juntaId]);
-
-  const onSubmit = async (values: FormValues) => {
-    try {
-      const jsonBody: Partial<Accion> = {
-        type: 'COMPRA',
-        amount: values.amount,
-        shareValue: shareValue,
-        description: `Compra de acciones por ${
-          values.amount
-        } acciones el dia ${format(values.date, 'yyyy-MM-dd')}`,
-        juntaId: juntaId,
-        memberId: values.memberId,
-      };
-
-      await api.post('acciones', jsonBody);
-      await fetchData();
-
-      toast({
-        title: 'Success',
-        description: 'Acciones compradas exitosamente',
-      });
-
-      form.reset();
-    } catch (error) {
-      console.error('Error adding accion:', error);
-      setError(error);
-      toast({
-        title: 'Error',
-        description: perro,
-        variant: 'destructive',
-      });
-    }
-  };
-
-  if (loading) return <div>Loading...</div>;
-
-  const handleDeleteAcciones = async (id: string) => {
-    try {
-      await api.delete(`acciones/${id}`);
-      await fetchData();
-
-      toast({
-        title: 'Success',
-        description: 'Accion eliminada exitosamente',
-      });
-    } catch (error) {
-      console.error('Error deleting accion:', error);
-      setError(error);
-      toast({
-        title: 'Error',
-        description: perro,
-        variant: 'destructive',
-      });
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className='flex items-center justify-center p-8'>
+        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900' />
+      </div>
+    );
+  }
 
   return (
     <div className='space-y-8 p-6'>
@@ -242,25 +84,34 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                       value={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className='h-10'>
+                        <SelectTrigger>
                           <SelectValue placeholder='Seleccionar miembro' />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {members
-                          .filter(
-                            (member) => member.user.member_role === 'socio'
-                          )
-                          .map((member) => (
+                        <SelectGroup>
+                          {members.length > 0 ? (
+                            members
+                              .filter(
+                                (member) => member.member_role === 'socio'
+                              )
+                              .map((member) => (
+                                <SelectItem
+                                  key={member.id}
+                                  value={member.id}
+                                >
+                                  {member.full_name}
+                                </SelectItem>
+                              ))
+                          ) : (
                             <SelectItem
-                              key={member.id}
-                              value={member.user.id}
+                              value='no-members'
+                              disabled
                             >
-                              {member.user.full_name ||
-                                member.user.username ||
-                                'Usuario sin nombre'}
+                              No hay miembros disponibles
                             </SelectItem>
-                          ))}
+                          )}
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </FormItem>
@@ -328,32 +179,26 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name='amount'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className='text-gray-700'>
-                      Valor de Acciones
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type='number'
-                        {...field}
-                        value={shareValue}
-                        className='h-10'
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+
+              <div>
+                <FormLabel className='text-gray-700'>
+                  Valor de Acciones
+                </FormLabel>
+                <Input
+                  type='number'
+                  value={shareValue}
+                  disabled
+                  className='h-10'
+                />
+              </div>
             </div>
 
             <Button
               type='submit'
               className='bg-black text-white'
+              disabled={isLoading}
             >
-              Comprar Acciones
+              {isLoading ? 'Procesando...' : 'Comprar Acciones'}
             </Button>
           </form>
         </Form>
@@ -372,6 +217,7 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                 <TableHead>Fecha de compra</TableHead>
                 <TableHead>Cantidad (#)</TableHead>
                 <TableHead>Valor Total (S/.)</TableHead>
+                <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -379,41 +225,36 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                 <TableRow key={accion.id}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>
-                    {accion.member.full_name || accion.member.username}
+                    {accion.member?.full_name || 'No disponible'}
                   </TableCell>
                   <TableCell>
                     {format(new Date(accion.createdAt), 'dd/MM/yyyy')}
                   </TableCell>
                   <TableCell>{accion.amount}</TableCell>
-                  <TableCell>{accion.amount * shareValue}</TableCell>
+                  <TableCell>
+                    S/.{(accion.amount * shareValue).toFixed(2)}
+                  </TableCell>
                   <TableCell>
                     <Button
                       variant='destructive'
+                      size='sm'
                       onClick={() => handleDeleteAcciones(accion.id)}
+                      disabled={isLoading}
                     >
                       Eliminar
                     </Button>
                   </TableCell>
                 </TableRow>
               ))}
-              <TableRow>
-                <TableCell
-                  colSpan={3}
-                  className='font-semibold'
-                >
-                  Total
-                </TableCell>
-                <TableCell className='font-semibold'>
-                  {acciones.reduce((sum, accion) => sum + accion.amount, 0)}
-                </TableCell>
-                <TableCell className='font-semibold'>
-                  {acciones.reduce(
-                    (sum, accion) => sum + accion.amount * shareValue,
-                    0
-                  )}
-                </TableCell>
-              </TableRow>
             </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TableCell colSpan={3}>Total</TableCell>
+                <TableCell>{totalShares}</TableCell>
+                <TableCell>S/.{totalValue.toFixed(2)}</TableCell>
+                <TableCell />
+              </TableRow>
+            </TableFooter>
           </Table>
         ) : (
           <div className='text-center py-4 text-gray-500'>

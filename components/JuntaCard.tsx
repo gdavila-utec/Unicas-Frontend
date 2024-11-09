@@ -1,5 +1,6 @@
 'use client';
 import { Button } from '@/components/ui/button';
+import { MouseEvent } from 'react';
 import {
   Card,
   CardContent,
@@ -9,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Junta } from '@/types/junta';
+import { Junta } from '@/types';
 import { DollarSignIcon, UserIcon } from 'lucide-react';
 
 export function JuntaCard({
@@ -19,17 +20,26 @@ export function JuntaCard({
 }: {
   junta: Junta;
   onSelectJunta: (junta: Junta) => void;
-  onDeleteJunta: (juntaId: number) => void;
+  onDeleteJunta: (id: string, e: React.MouseEvent) => void;
 }) {
-  console.log('junta: ', junta, 'junta card', junta.available_capital);
-  const totalSavings = junta.total_shares * junta.share_value;
-  const progress = (junta.current_month / junta.duration_months) * 100;
+  console.log(
+    'junta: ',
+    junta,
+    'junta card',
+    junta.available_capital,
+    'junta id',
+    junta.id
+  );
+  const totalSavings = junta.available_capital;
+  // const progress = (junta.current_month / junta.duration_months) * 100;
+  const socios = junta.members.filter((m) => m.user.role === 'USER');
+  console.log(' junta.members: ', junta.members);
   return (
     <Card className='w-full'>
       <CardHeader>
         <CardTitle>{junta.name}</CardTitle>
         <CardDescription>
-          Duración: {junta.duration_months} meses
+          {/* Duración: {junta.duration_months} meses */}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -40,16 +50,16 @@ export function JuntaCard({
             </span>
             <span className='flex items-center'>
               <UserIcon className='mr-2 h-4 w-4' />
-              {junta.members.length} socios
+              {socios.length} socios
             </span>
           </div>
-          <Progress
+          {/* <Progress
             value={progress}
             className='w-full'
-          />
-          <p>
+          /> */}
+          {/* <p>
             Mes actual: {junta.current_month} de {junta.duration_months}
-          </p>
+          </p> */}
         </div>
       </CardContent>
       <CardFooter className='flex justify-between'>
@@ -61,7 +71,7 @@ export function JuntaCard({
         </Button>
         <Button
           variant='destructive'
-          onClick={() => onDeleteJunta(junta.id)}
+          onClick={(e) => onDeleteJunta(junta.id, e)}
           className='flex-1 ml-2'
         >
           Eliminar

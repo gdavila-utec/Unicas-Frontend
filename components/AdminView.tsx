@@ -5,7 +5,7 @@ import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { JuntaCard } from '@/components/JuntaCard';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { Card, CardContent } from '@/components/ui/card';
-import { Junta } from '@/types/junta';
+import { Junta } from '@/types';
 
 const EmptyJuntasMessage = () => (
   <Card className='shadow-md'>

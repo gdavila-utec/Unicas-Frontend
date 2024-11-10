@@ -62,6 +62,7 @@ export const usePagos = (juntaId: string) => {
       const response = await api.get(`/prestamos/junta/${juntaId}`);
       return response;
     },
+    staleTime: 0,
   });
 
   const { data: paymentHistory = [], isLoading: isLoadingHistory } = useQuery<
@@ -72,19 +73,36 @@ export const usePagos = (juntaId: string) => {
       const response = await api.get(`junta-payments/${juntaId}/history`);
       return response;
     },
+    staleTime: 0,
   });
 
-  const { data: loanStatus, isLoading: isLoadingLoanStatus } =
-    useQuery<LoanStatus>({
-      queryKey: ['loan-status', selectedPrestamoId],
-      queryFn: async () => {
-        const response = await api.get(
-          `prestamos/${selectedPrestamoId}/remaining-payments`
-        );
-        return response;
-      },
-      enabled: !!selectedPrestamoId,
-    });
+  const {
+    data: loanStatus,
+    isLoading: isLoadingLoanStatus,
+    refetch: refetchLoanStatus,
+  } = useQuery<LoanStatus>({
+    queryKey: ['loan-status', selectedPrestamoId],
+    queryFn: async () => {
+      console.log('selectedPrestamoId: ', selectedPrestamoId);
+      const response = await api.get(
+        `prestamos/${selectedPrestamoId}/remaining-payments`
+      );
+      return response;
+    },
+    enabled: !!selectedPrestamoId,
+    staleTime: 0,
+  });
+
+  const refetch = async () => {
+    await Promise.all([
+      refetchLoanStatus(),
+      queryClient.invalidateQueries({ queryKey: ['payment-history', juntaId] }),
+      queryClient.invalidateQueries({ queryKey: ['junta', juntaId] }),
+      queryClient.invalidateQueries({
+        queryKey: ['loan-status', selectedPrestamoId],
+      }),
+    ]);
+  };
 
   // Mutations
   const createPaymentMutation = useMutation({
@@ -143,6 +161,7 @@ export const usePagos = (juntaId: string) => {
   const handleFormChange = () => {
     const memberId = form.getValues('member');
     const loanId = form.getValues('loan');
+    console.log('loanId: ', loanId);
 
     if (loanId) {
       setSelectedPrestamoId(loanId);
@@ -189,6 +208,7 @@ export const usePagos = (juntaId: string) => {
     form,
     members,
     loans: filteredLoans,
+    refetchLoanStatus,
     paymentHistory,
     loanStatus,
     isLoading:

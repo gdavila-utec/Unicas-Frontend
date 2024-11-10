@@ -10,6 +10,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { InputAmount } from '@/components/ui/input-amount';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -139,10 +140,14 @@ export const Ajustes = () => {
                   <FormItem>
                     <FormLabel>Valor de la acción</FormLabel>
                     <FormControl>
-                      <Input
+                      {/* <Input
                         type='number'
-                        step='0.01'
+                        step='5'
                         {...field}
+                      /> */}
+                      <InputAmount
+                        {...field}
+                        type='number'
                       />
                     </FormControl>
                     <FormMessage />

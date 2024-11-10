@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { InputAmount } from '@/components/ui/input-amount';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -46,6 +47,7 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
     form,
     members,
     loans,
+    refetchLoanStatus,
     paymentHistory,
     loanStatus,
     isLoading,
@@ -55,7 +57,15 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
     onSubmit,
   } = usePagos(juntaId);
 
-  console.log('PagosSection members: ', members);
+  useEffect(() => {
+    refetchLoanStatus();
+    console.log('paymentHistory: ', paymentHistory);
+    console.log('isLoading: ', isLoading);
+    console.log('loanStatus: ', loanStatus);
+    console.log('PagosSection loans: ', loans);
+    console.log('PagosSection members: ', members);
+  }, [loanStatus]);
+
   if (isLoading) {
     return (
       <div className='flex justify-center items-center p-8'>
@@ -192,7 +202,7 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
                   <FormItem>
                     <FormLabel>Monto pago de capital</FormLabel>
                     <FormControl>
-                      <Input
+                      <InputAmount
                         type='number'
                         {...field}
                         onChange={(e) => field.onChange(Number(e.target.value))}
@@ -209,7 +219,7 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
                   <FormItem>
                     <FormLabel>Monto pago de intereses</FormLabel>
                     <FormControl>
-                      <Input
+                      <InputAmount
                         type='number'
                         {...field}
                         onChange={(e) => field.onChange(Number(e.target.value))}

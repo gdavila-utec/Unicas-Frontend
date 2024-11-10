@@ -131,8 +131,15 @@ export const usePrestamos = (juntaId: string) => {
     >
   ) => {
     const { name, value, type } = e.target;
+    const cleanValue = value.replace(/\D/g, '');
+
+    // Remove leading zeros
+    const formattedValue = cleanValue.replace(/^0+/, '');
+    // updateFormData({
+    //   [name]: type === 'number' ? parseFloat(value) || 0 : value,
+    // });
     updateFormData({
-      [name]: type === 'number' ? parseFloat(value) || 0 : value,
+      [name]: formattedValue,
     });
   };
 

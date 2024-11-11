@@ -23,6 +23,7 @@ interface PrestamoDetailsProps {
 export function PrestamoDetails({ id }: PrestamoDetailsProps) {
   const {
     prestamo,
+    loanStatus,
     juntaId, // Now available from the hook
     isLoading,
     error,
@@ -190,7 +191,7 @@ export function PrestamoDetails({ id }: PrestamoDetailsProps) {
                       {formatMoney(schedule.expected_amount)}
                     </TableCell>
                     <TableCell>
-                      {formatMoney(schedule.remaining_balance)}
+                      {formatMoney(prestamo.amount - schedule.expected_amount)}
                     </TableCell>
                   </TableRow>
                 ))}

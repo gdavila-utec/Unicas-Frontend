@@ -32,8 +32,27 @@ interface PrestamoDetails {
   }>;
 }
 
+interface LoanStatus {
+  totalPaid: number;
+  remainingAmount: number;
+  remainingPayments: Array<{
+    id: string;
+    installment_number: number;
+    due_date: string;
+    expected_amount: number;
+    principal: number;
+    interest: number;
+    status: 'PENDING' | 'PAID';
+    remaining_balance: number;
+  }>;
+  nextPaymentDue: number | null;
+  nextPaymentDate: string | null;
+  isOverdue: boolean;
+}
+
 interface UsePrestamoDetailsResult {
   prestamo: PrestamoDetails | null;
+  loanStatus: LoanStatus | null;
   isLoading: boolean;
   error: Error | null;
   juntaId: string | null;
@@ -55,6 +74,20 @@ export const usePrestamoDetails = (id: string): UsePrestamoDetailsResult => {
       const response = await api.get(`prestamos/${id}`);
       return response;
     },
+  });
+
+  const {
+    data: loanStatus,
+    isLoading: isLoadingLoanStatus,
+    error: loanStatusError,
+  } = useQuery<LoanStatus>({
+    queryKey: ['loan-status', id],
+    queryFn: async () => {
+      const response = await api.get(`prestamos/${id}/remaining-payments`);
+      return response;
+    },
+    enabled: !!id,
+    staleTime: 0,
   });
 
   const getTotalInterest = () => {
@@ -129,7 +162,7 @@ export const usePrestamoDetails = (id: string): UsePrestamoDetailsResult => {
       formatMoney(schedule.interest),
       formatMoney(schedule.principal),
       formatMoney(schedule.expected_amount),
-      formatMoney(schedule.remaining_balance),
+      formatMoney(loanStatus?.remainingAmount ?? 0),
       schedule.status === 'PAID' ? 'Pagado' : 'Pendiente',
     ]);
 
@@ -185,6 +218,7 @@ export const usePrestamoDetails = (id: string): UsePrestamoDetailsResult => {
 
   return {
     prestamo: prestamo ?? null,
+    loanStatus: loanStatus ?? null,
     juntaId: prestamo?.juntaId || null,
     isLoading,
     error: error as Error | null,

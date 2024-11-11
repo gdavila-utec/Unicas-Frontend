@@ -188,6 +188,7 @@ const ResumenSection: React.FC<ResumenSectionProps> = ({ juntaId }) => {
         <h3 className='text-xl font-semibold'>Capital Social</h3>
         {capital ? (
           <>
+            <p>Capital Total: S/.{capital.total}</p>
             <p>Reserva Legal: S/.{capital.base.toFixed(2)}</p>
             <p>Fondo Social: S/.{capital.available.toFixed(2)}</p>
           </>

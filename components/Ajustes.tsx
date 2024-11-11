@@ -184,7 +184,7 @@ export const Ajustes = () => {
                     <FormControl>
                       <Input
                         type='number'
-                        step='0.01'
+                        step='1'
                         {...field}
                       />
                     </FormControl>
@@ -203,7 +203,7 @@ export const Ajustes = () => {
                     <FormControl>
                       <Input
                         type='number'
-                        step='0.01'
+                        step='1'
                         {...field}
                       />
                     </FormControl>
@@ -241,7 +241,7 @@ export const Ajustes = () => {
                     <FormControl>
                       <Input
                         type='number'
-                        step='0.01'
+                        step='1'
                         {...field}
                       />
                     </FormControl>

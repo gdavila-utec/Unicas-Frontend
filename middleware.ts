@@ -64,6 +64,7 @@ function decodeToken(token: string) {
 function isAdminRoute(pathname: string): boolean {
   const adminRoutes = [
     '/admin',
+    '/prestamo',
     '/api/users',
     '/api/juntas',
     '/api/members',

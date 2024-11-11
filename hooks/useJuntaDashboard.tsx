@@ -115,7 +115,7 @@ export const useJuntaDashboard = (juntaId: string): UseJuntaDashboardResult => {
       refetchJuntaData(),
       // refetchMembers(),
       // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ['junta', juntaId] }),
+      // queryClient.invalidateQueries({ queryKey: ['junta', juntaId] }),
     ]);
   };
 

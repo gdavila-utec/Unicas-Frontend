@@ -49,7 +49,7 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
     loans,
     refetchLoanStatus,
     paymentHistory,
-    loanStatus,
+    loanStatusUpdatePrincipal,
     isLoading,
     handleFormChange,
     handleCuotaCheck,
@@ -59,12 +59,88 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
 
   useEffect(() => {
     refetchLoanStatus();
-    console.log('paymentHistory: ', paymentHistory);
-    console.log('isLoading: ', isLoading);
-    console.log('loanStatus: ', loanStatus);
-    console.log('PagosSection loans: ', loans);
-    console.log('PagosSection members: ', members);
+  }, [refetchLoanStatus]);
+
+  const loanStatus = React.useMemo(() => {
+    if (!loanStatusUpdatePrincipal?.remainingPayments) return null;
+
+    const filteredPayments = loanStatusUpdatePrincipal.remainingPayments
+      .filter((item, index) => {
+        if (index === 0) return true;
+        const previousItem =
+          loanStatusUpdatePrincipal.remainingPayments[index - 1];
+        return item.installment_number !== previousItem.installment_number;
+      })
+      .map((payment: any) => {
+        // if (payment.id === form.watch('loan')) {
+        return {
+          ...payment,
+          // principal: {remainingPrincipal: payment.expected_amount - payment.interest, saldo: loanStatus.remainingAmount - loanStatus.totalPaid},
+          principal: payment.expected_amount - payment.interest,
+        };
+        // }
+        // return payment;
+      });
+    console.log('filteredPayments: ', filteredPayments);
+
+    return {
+      ...loanStatusUpdatePrincipal,
+      remainingPayments: filteredPayments,
+    };
+  }, [loanStatusUpdatePrincipal, form]);
+
+  const saldo = React.useMemo(() => {
+    return loanStatus?.remainingPayments?.reduce(
+      (acc, item) => acc + item.expected_amount,
+      0
+    );
   }, [loanStatus]);
+
+  const totalCuotas = React.useMemo(() => {
+    return loanStatusUpdatePrincipal?.remainingPayments?.reduce(
+      (acc, item) => acc + item.principal,
+      0
+    );
+  }, [loanStatusUpdatePrincipal]);
+
+  // const totalDeuda = (memberId: string, loanId: string) => {
+  //   return loans
+  //     .filter((loan) => loan.memberId === memberId && loan.id === loanId)
+  //     .reduce((acc, loan) => acc + loan.paymentSchedule.reduce(pago=>pago.interest), 0);
+  // };
+  // const interesPagado = (memberId: string, loanId: string) => {
+  //   return paymentHistory
+  //     .filter(
+  //       (payment) =>
+  //         payment.memberId === memberId &&
+  //         payment.prestamo.original_prestamo_id === loanId
+  //     )
+  //     .reduce((acc, payment) => acc + payment.interest_paid, 0);
+  // };
+
+  const interesPagado = React.useMemo(() => {
+    return loanStatusUpdatePrincipal?.remainingPayments.reduce(
+      (acc, item) => acc + item.interest,
+      0
+    );
+  }, [loanStatusUpdatePrincipal]);
+
+  const totalPrestado = React.useMemo(() => {
+    return loanStatusUpdatePrincipal?.remainingPayments.reduce(
+      (acc, item) => acc + item.principal + item.interest,
+      0
+    );
+  }, [loanStatusUpdatePrincipal]);
+
+  const saldoPendienteDePago = (loanId: string, memberId: string) => {
+    return paymentHistory.reduce((acc, item) => acc + item.remaining_amount, 0);
+  };
+
+  const totalPrestamo = (loanId: string, memberId: string) => {
+    return loans
+      .filter((loan) => loan.id === loanId && loan.memberId === memberId)
+      .reduce((acc, item) => acc + item.amount, 0);
+  };
 
   if (isLoading) {
     return (
@@ -200,7 +276,7 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
                 name='capital_payment'
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Monto pago de capital</FormLabel>
+                    <FormLabel>Cuota pago de capital</FormLabel>
                     <FormControl>
                       <InputAmount
                         type='number'
@@ -233,96 +309,34 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
             {/* Payment Options */}
             <div className='space-y-4 flex gap-20 ml-1'>
               <div className='flex space-x-6 items-center'>
-                <FormField
-                  control={form.control}
-                  name='is_late_payment'
-                  render={({ field }) => (
-                    <FormItem className='flex items-center space-x-2'>
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <Label>Mora</Label>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name='different_payment'
-                  render={({ field }) => (
-                    <FormItem className='flex items-center space-x-2'>
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <Label>Pago diferente</Label>
-                    </FormItem>
-                  )}
-                />
+                <span className='text-sm text-gray-500'>
+                  Saldo pendiente: S/. {saldo ? saldo.toFixed(2) : 'S/. 0.00'}
+                </span>
               </div>
             </div>
 
             {/* Installments Section */}
             {loanStatus && (
               <div className='p-4'>
-                <div className='font-semibold mb-3 mb-5 text-md'>
-                  Cuotas a pagar
-                </div>
+                <div className='font-semibold mb-5 text-md'>Cuotas a pagar</div>
                 <div>
-                  <div className='grid grid-cols-11 text-xs md:text-sm mb-5 font-medium'>
-                    <p className='text-left w-10'>Cuota</p>
-                    <p className='w-5'></p>
-                    <p className='text-left w-20 min-w-[128px]'>Fecha</p>
-                    <p className='w-10'></p>
-                    <p className='text-center w-10'>Monto</p>
-                    <p className='w-5'></p>
-                    <p className='text-right w-10'>Interes</p>
-                    <p className='w-5'></p>
-                    <p className='text-left w-40'>Pago de capital</p>
+                  <div className='grid grid-cols-7 text-xs md:text-sm mb-5 font-medium'>
                     <p className='text-right'></p>
+                    <p className='text-left w-10 min-w-[64px]'>Cuota #</p>
+                    <p className='text-left w-20'>Fecha</p>
+                    <p className='text-left w-40'>Pago de capital</p>
+                    <p className='text-right w-10'>Interes</p>
+                    <p className='text-center w-10'>Cuota</p>
+                    <p className='text-left w-10'>Saldo</p>
                   </div>
 
-                  {loanStatus.remainingPayments
-                    .filter((item, index) => {
-                      if (index === 0) return true;
-                      const previousItem =
-                        loanStatus.remainingPayments[index - 1];
-                      return (
-                        item.installment_number !==
-                        previousItem.installment_number
-                      );
-                    })
-                    .map((installment: Payment) => (
+                  {loanStatus?.remainingPayments &&
+                    loanStatus.remainingPayments.map((installment: Payment) => (
                       <div
                         key={installment.id}
-                        className='grid grid-cols-11 text-xs md:text-sm py-4 border-b border-gray-100 overflow-x-auto'
+                        className='grid grid-cols-7 text-xs md:text-sm py-4 border-b border-gray-100 overflow-x-auto'
                       >
-                        <p className='text-center w-5'>
-                          {installment.installment_number}
-                        </p>
-                        <p className='w-5'></p>
-                        <p className='text-left min-w-[64px] text-xs md:text-sm w-10 mr-10'>
-                          {format(new Date(installment.due_date), 'dd/MM/yyyy')}
-                        </p>
-                        <p className='w-20 min-w-[128px] ml-10'></p>
-                        <p className='text-center w-10'>
-                          {installment.expected_amount.toFixed(2)}
-                        </p>
-                        <p className='w-5'></p>
-                        <p className='text-right w-10'>
-                          {installment.interest.toFixed(2)}
-                        </p>
-                        <p className='w-5'></p>
-                        <p className='text-right w-10'>
-                          {installment.principal.toFixed(2)}
-                        </p>
-                        <p className='w-5'></p>
-                        <p className='text-left w-10'>
+                        <p className='text-left w-0'>
                           <FormField
                             control={form.control}
                             name='checkValue'
@@ -332,15 +346,52 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
                                   name={installment.id}
                                   checked={field.value}
                                   onCheckedChange={() =>
-                                    handleCuotaCheck(installment)
+                                    handleCuotaCheck(installment, field.value)
                                   }
                                 />
                               </FormControl>
                             )}
                           />
                         </p>
+                        <p className='text-center w-5'>
+                          {installment.installment_number}
+                        </p>
+                        <p className='text-left min-w-[64px] text-xs md:text-sm w-10 mr-10'>
+                          {format(new Date(installment.due_date), 'dd/MM/yyyy')}
+                        </p>
+                        <p className='text-right w-10'>
+                          {installment.principal.toFixed(2)}
+                        </p>
+                        <p className='text-right w-10'>
+                          {installment.interest.toFixed(2)}
+                        </p>
+                        <p className='text-center w-10'>
+                          {installment.expected_amount.toFixed(2)}
+                        </p>
+                        <p className='text-center w-10'>
+                          {/* {(saldo - installment.expected_amount).toFixed(2)} */}
+                        </p>
                       </div>
                     ))}
+                  <div className='grid grid-cols-7 text-xs md:text-sm py-4 border-b border-gray-100 font-bold'>
+                    <p className='text-left w-0'></p>
+                    <p className='text-center w-5'></p>
+                    <p className='text-left w-20'>Totales</p>
+                    <p className='text-right w-10'>
+                      {' '}
+                      {loanStatus.remainingAmount.toFixed(2)}
+                    </p>
+                    <p className='text-right w-10'>{interesPagado}</p>
+                    <p className='text-center w-10'> {saldo}</p>
+                    <p className='text-center w-10'>
+                      {(
+                        totalPrestamo(
+                          form.getValues('loan'),
+                          form.getValues('member')
+                        ) - saldo
+                      ).toFixed(2)}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

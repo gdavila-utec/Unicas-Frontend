@@ -29,6 +29,7 @@ export const usePrestamos = (juntaId: string) => {
     guaranteeType: 'AVAL',
     guaranteeDetail: '',
     formPurchased: false,
+    formCost: 0,
   };
 
   const [formData, setFormData] = useState<LoanFormData>(initialFormData);
@@ -71,8 +72,10 @@ export const usePrestamos = (juntaId: string) => {
         guarantee_type: data.guaranteeType,
         guarantee_detail: data.guaranteeDetail,
         form_purchased: data.formPurchased,
+        form_cost: data.formCost,
         payment_type: 'MENSUAL',
       };
+      console.log('payload: ', payload);
 
       return api.post<ApiResponse<Prestamo>>('prestamos', payload);
     },
@@ -131,16 +134,18 @@ export const usePrestamos = (juntaId: string) => {
     >
   ) => {
     const { name, value, type } = e.target;
+    console.log('value: ', value);
+    console.log('name: ', name);
     const cleanValue = value.replace(/\D/g, '');
 
     // Remove leading zeros
     const formattedValue = cleanValue.replace(/^0+/, '');
-    // updateFormData({
-    //   [name]: type === 'number' ? parseFloat(value) || 0 : value,
-    // });
     updateFormData({
-      [name]: formattedValue,
+      [name]: type === 'number' ? parseFloat(value) || 0 : value,
     });
+    // updateFormData({
+    //   [name]: formattedValue,
+    // });
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

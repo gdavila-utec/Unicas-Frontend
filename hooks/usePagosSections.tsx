@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { api } from '@/utils/api';
@@ -12,6 +12,7 @@ import type {
   Prestamo,
   MemberResponse as Member,
 } from '@/types';
+import { useFormField } from '@/components/ui/form';
 
 const formSchema = z.object({
   date: z.date(),
@@ -77,7 +78,7 @@ export const usePagos = (juntaId: string) => {
   });
 
   const {
-    data: loanStatus,
+    data: loanStatusUpdatePrincipal,
     isLoading: isLoadingLoanStatus,
     refetch: refetchLoanStatus,
   } = useQuery<LoanStatus>({
@@ -168,7 +169,7 @@ export const usePagos = (juntaId: string) => {
     }
   };
 
-  const handleCuotaCheck = (installment: Payment) => {
+  const handleCuotaCheck = (installment: Payment, field: boolean) => {
     if (installment) {
       form.setValue(
         'capital_payment',
@@ -180,14 +181,20 @@ export const usePagos = (juntaId: string) => {
       );
 
       if (
-        loanStatus?.remainingPayments &&
-        installment.id !== loanStatus.remainingPayments[0].id
+        loanStatusUpdatePrincipal?.remainingPayments &&
+        installment.id !== loanStatusUpdatePrincipal.remainingPayments[0].id
       ) {
         toast({
           title: 'Pago cuota',
           description:
             'Solo puede seleccionar la cuota que le corresponde pagar antes de poder pagar otras cuotas',
         });
+      } else {
+        const checkValue = form.getFieldState('checkValue');
+        console.log('checkValue: ', checkValue);
+        console.log('field: ', field);
+
+        // form.setValue('checkValue', !field);
       }
     }
   };
@@ -204,20 +211,20 @@ export const usePagos = (juntaId: string) => {
     ? loans.filter((loan) => loan.memberId === form.watch('member'))
     : loans;
 
+  const isLoading =
+    isLoadingMembers ||
+    isLoadingLoans ||
+    isLoadingHistory ||
+    isLoadingLoanStatus;
+
   return {
     form,
     members,
     loans: filteredLoans,
     refetchLoanStatus,
     paymentHistory,
-    loanStatus,
-    isLoading:
-      isLoadingMembers ||
-      isLoadingLoans ||
-      isLoadingHistory ||
-      isLoadingLoanStatus ||
-      createPaymentMutation.isPending ||
-      deletePaymentMutation.isPending,
+    loanStatusUpdatePrincipal, // Changed from loanStatus
+    isLoading,
     handleFormChange,
     handleCuotaCheck,
     handleDeletePago,

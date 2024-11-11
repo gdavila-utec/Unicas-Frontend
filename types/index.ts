@@ -201,6 +201,7 @@ export type UserStatus = 'Activo' | 'Inactivo' | 'Pendiente';
 export type CapitalAmount = {
   base: number;
   available: number;
+  total: number;
 };
 
 // Configuration Types
@@ -328,6 +329,7 @@ export interface LoanFormData {
   guaranteeType: GuaranteeType;
   guaranteeDetail: string;
   formPurchased: boolean;
+  formCost: number;
 }
 
 export interface CreateLoanPayload {
@@ -342,6 +344,7 @@ export interface CreateLoanPayload {
   guarantee_type: GuaranteeType;
   guarantee_detail: string;
   form_purchased: boolean;
+  form_cost: number;
   payment_type: PaymentType;
 }
 

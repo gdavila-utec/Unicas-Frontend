@@ -84,7 +84,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
                 size='sm'
                 className='hidden sm:flex items-center gap-2 rounded-md'
               >
-                Efectivo disponible:{' '}
+                Capital Total:{' '}
                 {availableCapital
                   ? 'S/.' + availableCapital.toFixed(2)
                   : 'S/. 0.00 '}

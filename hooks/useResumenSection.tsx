@@ -95,6 +95,7 @@ export const useResumen = (juntaId: string): UseResumenResult => {
     queryFn: async () => {
       const response = await api.get<Junta>(`juntas/${juntaId}`);
       return {
+        total: response.current_capital,
         base: response.base_capital,
         available: response.available_capital,
       };

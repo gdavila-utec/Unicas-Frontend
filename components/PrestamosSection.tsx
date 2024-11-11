@@ -5,6 +5,7 @@ import { InputAmount } from '@/components/ui/input-amount';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { Pencil, Trash2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -23,6 +24,7 @@ import {
 import { useBoardConfig } from '@/store/configValues';
 import { usePrestamos } from '@/hooks/usePrestamosSection';
 import type { GuaranteeType } from '@/types';
+import { useRouter } from 'next/navigation';
 
 interface PrestamosSectionProps {
   juntaId: string;
@@ -30,6 +32,7 @@ interface PrestamosSectionProps {
 
 const PrestamosSection: React.FC<PrestamosSectionProps> = ({ juntaId }) => {
   const { monthlyInterestRate, loanFormValue } = useBoardConfig();
+  const router = useRouter();
   const {
     formData,
     members,
@@ -240,7 +243,10 @@ const PrestamosSection: React.FC<PrestamosSectionProps> = ({ juntaId }) => {
                 id='formPurchased'
                 checked={formData.formPurchased}
                 onCheckedChange={(checked) =>
-                  updateFormData({ formPurchased: !!checked })
+                  updateFormData({
+                    formPurchased: !!checked,
+                    formCost: loanFormValue,
+                  })
                 }
               />
               <Label htmlFor='formPurchased'>
@@ -306,11 +312,20 @@ const PrestamosSection: React.FC<PrestamosSectionProps> = ({ juntaId }) => {
                     <TableCell>{prestamo.loan_type}</TableCell>
                     <TableCell>
                       <Button
-                        variant='destructive'
+                        variant='ghost'
+                        size='icon'
+                        onClick={() => router.push(`/prestamo/${prestamo.id}`)}
+                      >
+                        <Pencil className='h-4 w-4' />
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant='ghost'
                         size='sm'
                         onClick={() => handleDeleteLoan(prestamo.id)}
                       >
-                        Eliminar
+                        <Trash2 className='h-4 w-4' />
                       </Button>
                     </TableCell>
                   </TableRow>

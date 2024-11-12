@@ -1,4 +1,5 @@
-import { Button } from '@/components/ui/button';
+import React from 'react';
+import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -16,223 +17,260 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import React, { useEffect, useState } from 'react';
-import { api } from '@/utils/api';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
+import { useMultas } from '@/hooks/useMultasSection';
+import { CalendarIcon } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
-interface Member {
-  id: number;
-  full_name: string;
+interface MultasSectionProps {
+  juntaId: string;
 }
 
-interface Multa {
-  id: number;
-  member_name: string;
-  reason: string;
-  amount: number;
-  status: string;
-}
+export const MultasSection: React.FC<MultasSectionProps> = ({ juntaId }) => {
+  const { form, members, multas, isLoading, onSubmit, handleDeleteMulta } =
+    useMultas(juntaId);
 
-export default function MultaSection({ juntaId }: { juntaId: string }) {
-  const { toast } = useToast();
-  const [member, setMember] = useState('');
-  const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [multas, setMultas] = useState<Multa[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [reason, setReason] = useState<string>('');
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const [membersData, multasData] = await Promise.all([
-          api.get<Member[]>(`members/${juntaId}`),
-          api.get<Multa[]>(`juntas/${juntaId}/multas`),
-        ]);
-        setMembers(membersData);
-        setMultas(multasData);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        toast({
-          title: 'Error',
-          description:
-            error instanceof Error ? error.message : 'Error al cargar datos',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [juntaId, toast]);
-
-  const handlePayMulta = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const newMulta = await api.post<Multa>(`juntas/${juntaId}/multas`, {
-        reason,
-        amount,
-        member,
-        comment: description,
-      });
-
-      setMultas([...multas, newMulta]);
-      setMember('');
-      setDescription('');
-      setAmount('');
-      setReason('');
-
-      toast({
-        title: 'Éxito',
-        description: 'Multa registrada correctamente',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description:
-          error instanceof Error ? error.message : 'Error al registrar multa',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleDeleteMulta = async (multaId: number) => {
-    try {
-      await api.delete(`juntas/${juntaId}/multas/${multaId}`);
-      setMultas(multas.filter((multa) => multa.id !== multaId));
-      toast({
-        title: 'Éxito',
-        description: 'Multa eliminada correctamente',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description:
-          error instanceof Error ? error.message : 'Error al eliminar multa',
-        variant: 'destructive',
-      });
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className='flex justify-center items-center p-8'>
+        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900' />
+      </div>
+    );
+  }
 
   return (
     <div className='space-y-8'>
       <Card>
         <CardHeader>
-          <CardTitle>Pagar Multa</CardTitle>
+          <CardTitle>Registrar Multa</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div>Loading...</div>
-          ) : (
+          <Form {...form}>
             <form
+              onSubmit={form.handleSubmit(onSubmit)}
               className='space-y-4'
-              onSubmit={handlePayMulta}
             >
-              <Select
-                onValueChange={setMember}
-                value={member}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder='Seleccionar miembro' />
-                </SelectTrigger>
-                <SelectContent>
-                  {members.length > 0 ? (
-                    members.map((member) => (
-                      <SelectItem
-                        key={member.id}
-                        value={member.id.toString()}
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <FormField
+                  control={form.control}
+                  name='memberId'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Miembro</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
                       >
-                        {member.full_name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem
-                      value='No members'
-                      disabled
-                    >
-                      No hay socios disponibles
-                    </SelectItem>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder='Seleccionar miembro' />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {members
+                            .filter((member) => member.role === 'USER')
+                            .map((member) => (
+                              <SelectItem
+                                key={member.id}
+                                value={member.id}
+                              >
+                                {member.full_name || member.username}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </SelectContent>
-              </Select>
+                />
 
-              <Select
-                onValueChange={setReason}
-                value={reason}
+                <FormField
+                  control={form.control}
+                  name='reason'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Motivo</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder='Seleccionar motivo' />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value='TARDANZA'>Tardanza</SelectItem>
+                          <SelectItem value='INASISTENCIA'>
+                            Inasistencia
+                          </SelectItem>
+                          <SelectItem value='OTROS'>Otros</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='date'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fecha</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant='outline'
+                              className='w-full justify-start text-left font-normal'
+                            >
+                              {field.value ? (
+                                format(field.value, 'dd/MM/yyyy')
+                              ) : (
+                                <span>Seleccionar fecha</span>
+                              )}
+                              <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className='w-auto p-0'
+                          align='start'
+                        >
+                          <Calendar
+                            mode='single'
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='amount'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Monto</FormLabel>
+                      <FormControl>
+                        <Input
+                          type='number'
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name='comments'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Comentarios (Opcional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        rows={3}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button
+                type='submit'
+                disabled={isLoading}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder='Motivo' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='TARDANZA'>Tardanza</SelectItem>
-                  <SelectItem value='INASISTENCIA'>Inasistencia</SelectItem>
-                  <SelectItem value='OTROS'>Otros</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Input
-                placeholder='Comentarios'
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-              <Input
-                type='number'
-                placeholder='Monto'
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-              <Button type='submit'>Pagar Multa</Button>
+                {isLoading ? 'Registrando...' : 'Registrar Multa'}
+              </Button>
             </form>
-          )}
+          </Form>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Historial de Multas</CardTitle>
+          <CardTitle>Lista de Multas</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div>Loading...</div>
-          ) : multas.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Miembro</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead>Monto</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {multas.map((multa) => (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>N°</TableHead>
+                <TableHead>Nombre completo (socio)</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Motivo</TableHead>
+                <TableHead>Comentarios</TableHead>
+                <TableHead>Monto</TableHead>
+                <TableHead>Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {multas.length > 0 ? (
+                multas.map((multa, index) => (
                   <TableRow key={multa.id}>
-                    <TableCell>{multa.member_name}</TableCell>
-                    <TableCell>{multa.reason}</TableCell>
-                    <TableCell>{multa.amount}</TableCell>
-                    <TableCell>{multa.status}</TableCell>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{multa.member?.full_name}</TableCell>
+                    <TableCell>
+                      {format(new Date(multa.createdAt), 'dd/MM/yyyy')}
+                    </TableCell>
+                    <TableCell>{multa.description}</TableCell>
+                    <TableCell>{'-'}</TableCell>
+                    <TableCell>S/.{multa.amount}</TableCell>
                     <TableCell>
                       <Button
                         variant='destructive'
                         size='sm'
                         onClick={() => handleDeleteMulta(multa.id)}
+                        disabled={isLoading}
                       >
                         Eliminar
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div>No hay multas registradas.</div>
-          )}
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className='text-center text-muted-foreground'
+                  >
+                    No hay multas registradas
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
   );
-}
+};
+
+export default MultasSection;

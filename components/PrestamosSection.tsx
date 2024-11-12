@@ -1,9 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { InputAmount } from '@/components/ui/input-amount';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { Pencil, Trash2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -19,163 +21,36 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Eye } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { api } from '@/utils/api';
-import { useToast } from '@/hooks/use-toast';
 import { useBoardConfig } from '@/store/configValues';
-import { Member, Prestamo, PaymentType, GuaranteeType, Junta } from '@/types';
-import { useJuntaStore } from '@/store/juntaValues';
-import { useCapitalStore } from '@/store/useCapitalStore';
+import { usePrestamos } from '@/hooks/usePrestamosSection';
+import type { GuaranteeType } from '@/types';
+import { useRouter } from 'next/navigation';
 
-import { set } from 'date-fns';
-
-interface LoanFormData {
-  memberId: string;
-  requestDate: string;
-  amount: number;
-  monthlyInterest: number;
-  installments: number;
-  paymentType: string;
-  reason: string;
-  guaranteeType: GuaranteeType;
-  guaranteeDetail: string;
-  formPurchased: boolean;
+interface PrestamosSectionProps {
+  juntaId: string;
 }
 
-const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
+const PrestamosSection: React.FC<PrestamosSectionProps> = ({ juntaId }) => {
   const { monthlyInterestRate, loanFormValue } = useBoardConfig();
-  const { toast } = useToast();
-  const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
-  const { setSelectedJunta, getJuntaById } = useJuntaStore();
-  const junta = getJuntaById(juntaId);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const { updateAvailableCapital } = useCapitalStore();
-  const [formData, setFormData] = useState<LoanFormData>({
-    memberId: '',
-    requestDate: new Date().toISOString().split('T')[0],
-    amount: 0,
-    monthlyInterest: monthlyInterestRate,
-    installments: 0,
-    paymentType: '',
-    reason: '',
-    guaranteeType: 'AVAL',
-    guaranteeDetail: '',
-    formPurchased: false,
-  });
-
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      const [membersData, prestamosData, juntaData] = await Promise.all([
-        api.get<Member[]>(`members/junta/${juntaId}`),
-        api.get<Prestamo[]>(`prestamos/junta/${juntaId}`),
-        api.get<Junta>(`juntas/${juntaId}`),
-      ]);
-      setMembers(membersData);
-      setPrestamos(prestamosData);
-      setSelectedJunta(juntaData);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast({
-        title: 'Error',
-        description:
-          error instanceof Error ? error.message : 'Error al cargar datos',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [juntaId]);
-
-  const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'number' ? parseFloat(value) : value,
-    }));
-  };
-
-  const handleGuaranteeTypeChange = (
-    value: 'AVAL' | 'INMUEBLE' | 'HIPOTECARIA' | 'PRENDARIA'
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      guaranteeType: value,
-      guaranteeDetail: '', // Reset detail when type changes
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    try {
-      const payload = {
-        juntaId,
-        memberId: formData.memberId,
-        request_date: formData.requestDate,
-        amount: formData.amount.toString(),
-        monthly_interest: formData.monthlyInterest.toString(),
-        number_of_installments: formData.installments,
-        loan_type: formData.paymentType,
-        reason: formData.reason,
-        guarantee_type: formData.guaranteeType,
-        guarantee_detail: formData.guaranteeDetail,
-        form_purchased: formData.formPurchased,
-        payment_type: 'MENSUAL' as PaymentType,
-      };
-      console.log('payload: ', payload);
-
-      await api.post('prestamos', payload);
-      await fetchData();
-      updateAvailableCapital(junta);
-      toast({
-        title: 'Éxito',
-        description: 'Préstamo registrado correctamente',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'Error al registrar préstamo',
-        variant: 'destructive',
-      });
-    }
-  };
+  const router = useRouter();
+  const {
+    formData,
+    members,
+    prestamos,
+    isLoading,
+    updateFormData,
+    handleInputChange,
+    handleSubmit,
+    handleDeleteLoan,
+  } = usePrestamos(juntaId);
 
   if (isLoading) {
     return (
-      <div className='flex justify-center items-center p-8'>Cargando...</div>
+      <div className='flex justify-center items-center p-8'>
+        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900' />
+      </div>
     );
   }
-
-  const handleDeleteLoan = async (id: string) => {
-    try {
-      await api.delete(`prestamos/${id}`);
-      await fetchData();
-      toast({
-        title: 'Éxito',
-        description: 'Préstamo eliminado correctamente',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description:
-          error instanceof Error ? error.message : 'Error al eliminar préstamo',
-        variant: 'destructive',
-      });
-    }
-  };
 
   return (
     <div className='space-y-8'>
@@ -189,31 +64,32 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
             className='space-y-6'
           >
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-              {/* Member Selection and Request Date */}
+              {/* Member Selection */}
               <div className='space-y-2'>
                 <Label>Seleccionar Miembro</Label>
                 <Select
                   value={formData.memberId}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, memberId: value }))
-                  }
+                  onValueChange={(value) => updateFormData({ memberId: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder='Seleccionar miembro' />
                   </SelectTrigger>
                   <SelectContent>
-                    {members.map((member) => (
-                      <SelectItem
-                        key={member.id}
-                        value={member.id}
-                      >
-                        {member.full_name}
-                      </SelectItem>
-                    ))}
+                    {members
+                      .filter((member) => member.member_role === 'socio')
+                      .map((member) => (
+                        <SelectItem
+                          key={member.id}
+                          value={member.id}
+                        >
+                          {member.full_name || member.username}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* Request Date */}
               <div className='space-y-2'>
                 <Label htmlFor='requestDate'>Fecha de Solicitud</Label>
                 <Input
@@ -225,10 +101,10 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
                 />
               </div>
 
-              {/* Amount and Interest */}
+              {/* Amount */}
               <div className='space-y-2'>
                 <Label htmlFor='amount'>Monto Solicitado</Label>
-                <Input
+                <InputAmount
                   type='number'
                   id='amount'
                   name='amount'
@@ -237,18 +113,19 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
                 />
               </div>
 
+              {/* Interest Rate */}
               <div className='space-y-2'>
                 <Label htmlFor='monthlyInterest'>Interés Mensual (%)</Label>
                 <Input
                   type='number'
                   id='monthlyInterest'
                   name='monthlyInterest'
-                  value={formData.monthlyInterest}
+                  value={monthlyInterestRate}
                   disabled
                 />
               </div>
 
-              {/* Installments and Payment Type */}
+              {/* Installments */}
               <div className='space-y-2'>
                 <Label htmlFor='installments'>Cantidad de Cuotas (meses)</Label>
                 <Input
@@ -260,12 +137,13 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
                 />
               </div>
 
+              {/* Payment Type */}
               <div className='space-y-2'>
                 <Label>Forma de Pago</Label>
                 <Select
                   value={formData.paymentType}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, paymentType: value }))
+                    updateFormData({ paymentType: value })
                   }
                 >
                   <SelectTrigger>
@@ -298,12 +176,17 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
                 />
               </div>
 
-              {/* Guarantee Type and Detail */}
+              {/* Guarantee Type */}
               <div className='space-y-2'>
                 <Label>Tipo de Garantía</Label>
                 <Select
                   value={formData.guaranteeType}
-                  onValueChange={handleGuaranteeTypeChange}
+                  onValueChange={(value: GuaranteeType) =>
+                    updateFormData({
+                      guaranteeType: value,
+                      guaranteeDetail: '',
+                    })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder='Seleccionar tipo de garantía' />
@@ -317,16 +200,14 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
                 </Select>
               </div>
 
+              {/* Guarantee Detail */}
               <div className='space-y-2'>
                 <Label>Garantía</Label>
                 {formData.guaranteeType === 'AVAL' ? (
                   <Select
                     value={formData.guaranteeDetail}
                     onValueChange={(value) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        guaranteeDetail: value,
-                      }))
+                      updateFormData({ guaranteeDetail: value })
                     }
                   >
                     <SelectTrigger>
@@ -340,7 +221,7 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
                             key={member.id}
                             value={member.id}
                           >
-                            {member.full_name}
+                            {member.full_name || member.username}
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -356,16 +237,16 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
               </div>
             </div>
 
-            {/* Form Purchase Checkbox */}
+            {/* Form Purchase */}
             <div className='flex items-center space-x-2'>
               <Checkbox
                 id='formPurchased'
                 checked={formData.formPurchased}
                 onCheckedChange={(checked) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    formPurchased: checked as boolean,
-                  }))
+                  updateFormData({
+                    formPurchased: !!checked,
+                    formCost: loanFormValue,
+                  })
                 }
               />
               <Label htmlFor='formPurchased'>
@@ -373,7 +254,13 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
               </Label>
             </div>
 
-            <Button type='submit'>Registrar Préstamo</Button>
+            <Button
+              type='submit'
+              className='w-full md:w-auto'
+              disabled={isLoading}
+            >
+              {isLoading ? 'Registrando...' : 'Registrar Préstamo'}
+            </Button>
           </form>
         </CardContent>
       </Card>
@@ -399,32 +286,63 @@ const PrestamosSection = ({ juntaId }: { juntaId: string }) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {/* {loan.loan_number} - {loan.loan_code} - {loan.loan_type} -{' '}
-              {loan.amount} soles - {loan.number_of_installments} */}
-              {prestamos.map((prestamo, index) => (
-                <TableRow key={prestamo.id}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>
-                    {prestamo.loan_code}-{prestamo.loan_number}
-                  </TableCell>
-                  <TableCell>{prestamo.member.full_name}</TableCell>
-                  <TableCell>
-                    {new Date(prestamo.request_date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>S/ {prestamo.amount}</TableCell>
-                  <TableCell>{prestamo.monthly_interest}%</TableCell>
-                  <TableCell>{prestamo.number_of_installments}</TableCell>
-                  <TableCell>{prestamo.loan_type}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant='destructive'
-                      onClick={() => handleDeleteLoan(prestamo.id)}
-                    >
-                      Eliminar
-                    </Button>
+              {prestamos.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={9}
+                    className='text-center text-muted-foreground py-6'
+                  >
+                    No hay préstamos registrados
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                prestamos.map((prestamo, index) => (
+                  <TableRow key={prestamo.id}>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>
+                      {prestamo.loan_code}-{prestamo.loan_number}
+                    </TableCell>
+                    <TableCell>{prestamo.member.full_name}</TableCell>
+                    <TableCell>
+                      {new Date(prestamo.request_date).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>S/ {prestamo.amount}</TableCell>
+                    <TableCell>{prestamo.monthly_interest}%</TableCell>
+                    <TableCell>{prestamo.number_of_installments}</TableCell>
+                    <TableCell>{prestamo.loan_type}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        onClick={() => router.push(`/prestamo/${prestamo.id}`)}
+                      >
+                        <Pencil className='h-4 w-4' />
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => handleDeleteLoan(prestamo.id)}
+                      >
+                        <Trash2 className='h-4 w-4' />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+              <TableRow>
+                <TableCell
+                  colSpan={9}
+                  className='text-center font-bold text-md pr-10 bg-gray-100'
+                >
+                  Total S/.{' '}
+                  {prestamos.reduce(
+                    (acc, prestamo) => acc + prestamo.amount,
+                    0
+                  )}
+                </TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         </CardContent>

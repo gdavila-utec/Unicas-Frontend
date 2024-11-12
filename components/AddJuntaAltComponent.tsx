@@ -1,7 +1,7 @@
 'use client';
-import React, { useState } from 'react';
-
-import { useAuth } from '../hooks/useAuth';
+import React from 'react';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -10,12 +10,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { CalendarIcon } from 'lucide-react';
-import { Calendar } from './ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Form,
   FormControl,
@@ -23,12 +25,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from './ui/form';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { format } from 'date-fns';
-// import { useAuth } from '../hooks/useAuth';
+} from '@/components/ui/form';
+import { useAddJunta } from '@/hooks/useAddJunta';
 
 interface AddJuntaComponentProps {
   onJuntaAdded: () => void;
@@ -36,67 +34,15 @@ interface AddJuntaComponentProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const formSchema = z.object({
-  name: z.string().min(1, 'El nombre es requerido'),
-  fecha_inicio: z.date(),
-  centro_poblado: z.string().min(1, 'El centro poblado es requerido'),
-  distrito: z.string().min(1, 'El distrito es requerido'),
-  provincia: z.string().min(1, 'La provincia es requerida'),
-  departamento: z.string().min(1, 'El departamento es requerido'),
-  latitud: z.string().min(1, 'La latitud es requerida'),
-  longitud: z.string().min(1, 'La longitud es requerida'),
-});
-
-export const AddJuntaComponent = ({
+export const AddJuntaComponent: React.FC<AddJuntaComponentProps> = ({
   onJuntaAdded,
   open,
   onOpenChange,
-}: AddJuntaComponentProps) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { token } = useAuth();
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      fecha_inicio: new Date(),
-      name: '',
-      centro_poblado: '',
-      distrito: '',
-      provincia: '',
-      departamento: '',
-      latitud: '0',
-      longitud: '0',
-    },
+}) => {
+  const { form, isLoading, onSubmit } = useAddJunta({
+    onJuntaAdded,
+    onOpenChange,
   });
-
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsLoading(true);
-    try {
-      const formattedDate = format(values.fecha_inicio, 'yyyy-MM-dd');
-      const response = await fetch('/api/juntas/', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...values,
-          fecha_inicio: formattedDate,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create junta');
-      }
-
-      onJuntaAdded();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error creating junta:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <Dialog
@@ -114,11 +60,10 @@ export const AddJuntaComponent = ({
         </DialogHeader>
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={onSubmit}
             className='space-y-4'
           >
             <div className='grid grid-cols-2 gap-4'>
-              {/* First row */}
               <FormField
                 control={form.control}
                 name='name'
@@ -135,6 +80,7 @@ export const AddJuntaComponent = ({
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name='fecha_inicio'
@@ -176,7 +122,6 @@ export const AddJuntaComponent = ({
                 )}
               />
 
-              {/* Second row */}
               <FormField
                 control={form.control}
                 name='centro_poblado'
@@ -193,6 +138,7 @@ export const AddJuntaComponent = ({
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name='distrito'
@@ -210,7 +156,6 @@ export const AddJuntaComponent = ({
                 )}
               />
 
-              {/* Third row */}
               <FormField
                 control={form.control}
                 name='provincia'
@@ -227,6 +172,7 @@ export const AddJuntaComponent = ({
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name='departamento'
@@ -244,7 +190,6 @@ export const AddJuntaComponent = ({
                 )}
               />
 
-              {/* Fourth row */}
               <FormField
                 control={form.control}
                 name='latitud'
@@ -263,6 +208,7 @@ export const AddJuntaComponent = ({
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name='longitud'

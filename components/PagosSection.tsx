@@ -1,11 +1,10 @@
+// PagosSection.tsx
 import React, { useEffect } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 import { InputAmount } from '@/components/ui/input-amount';
-import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -36,13 +35,12 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { usePagos } from '@/hooks/usePagosSections';
-import type { Payment } from '@/types';
 
 interface PagosSectionProps {
   juntaId: string;
 }
 
-const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
+export default function PagosSection({ juntaId }: PagosSectionProps) {
   const {
     form,
     members,
@@ -52,7 +50,6 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
     loanStatusUpdatePrincipal,
     isLoading,
     handleFormChange,
-    handleCuotaCheck,
     handleDeletePago,
     onSubmit,
   } = usePagos(juntaId);
@@ -61,90 +58,63 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
     refetchLoanStatus();
   }, [refetchLoanStatus]);
 
-  const loanStatus = React.useMemo(() => {
-    if (!loanStatusUpdatePrincipal?.remainingPayments) return null;
-
-    const filteredPayments = loanStatusUpdatePrincipal.remainingPayments
-      .filter((item, index) => {
-        if (index === 0) return true;
-        const previousItem =
-          loanStatusUpdatePrincipal.remainingPayments[index - 1];
-        return item.installment_number !== previousItem.installment_number;
-      })
-      .map((payment: any) => {
-        // if (payment.id === form.watch('loan')) {
-        return {
-          ...payment,
-          // principal: {remainingPrincipal: payment.expected_amount - payment.interest, saldo: loanStatus.remainingAmount - loanStatus.totalPaid},
-          principal: payment.expected_amount - payment.interest,
-        };
-        // }
-        // return payment;
-      });
-    console.log('filteredPayments: ', filteredPayments);
-
-    return {
-      ...loanStatusUpdatePrincipal,
-      remainingPayments: filteredPayments,
-    };
+  // Auto-fill payment fields when loan status updates
+  useEffect(() => {
+    if ((loanStatusUpdatePrincipal?.remainingPayments ?? []).length > 0) {
+      const nextPayment = loanStatusUpdatePrincipal?.remainingPayments?.[0] ?? {
+        principal: 0,
+        interest: 0,
+      };
+      form.setValue('capital_payment', nextPayment?.principal);
+      form.setValue('interest_payment', nextPayment?.interest);
+    }
   }, [loanStatusUpdatePrincipal, form]);
 
-  const saldo = React.useMemo(() => {
-    return loanStatus?.remainingPayments?.reduce(
-      (acc, item) => acc + item.expected_amount,
-      0
-    );
-  }, [loanStatus]);
-
-  const totalCuotas = React.useMemo(() => {
-    return loanStatusUpdatePrincipal?.remainingPayments?.reduce(
-      (acc, item) => acc + item.principal,
-      0
-    );
-  }, [loanStatusUpdatePrincipal]);
-
-  // const totalDeuda = (memberId: string, loanId: string) => {
-  //   return loans
-  //     .filter((loan) => loan.memberId === memberId && loan.id === loanId)
-  //     .reduce((acc, loan) => acc + loan.paymentSchedule.reduce(pago=>pago.interest), 0);
-  // };
-  // const interesPagado = (memberId: string, loanId: string) => {
-  //   return paymentHistory
-  //     .filter(
-  //       (payment) =>
-  //         payment.memberId === memberId &&
-  //         payment.prestamo.original_prestamo_id === loanId
-  //     )
-  //     .reduce((acc, payment) => acc + payment.interest_paid, 0);
-  // };
-
-  const interesPagado = React.useMemo(() => {
-    return loanStatusUpdatePrincipal?.remainingPayments.reduce(
-      (acc, item) => acc + item.interest,
-      0
-    );
-  }, [loanStatusUpdatePrincipal]);
-
-  const totalPrestado = React.useMemo(() => {
-    return loanStatusUpdatePrincipal?.remainingPayments.reduce(
-      (acc, item) => acc + item.principal + item.interest,
-      0
-    );
-  }, [loanStatusUpdatePrincipal]);
-
-  const saldoPendienteDePago = (loanId: string, memberId: string) => {
-    return paymentHistory.reduce((acc, item) => acc + item.remaining_amount, 0);
+  // Calculate summary values
+  const getNextPaymentAmount = () => {
+    if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 0;
+    return loanStatusUpdatePrincipal.remainingPayments[0]?.expected_amount || 0;
   };
 
-  const totalPrestamo = (loanId: string, memberId: string) => {
-    return loans
-      .filter((loan) => loan.id === loanId && loan.memberId === memberId)
-      .reduce((acc, item) => acc + item.amount, 0);
+  const getNextPaymentPrincipal = () => {
+    if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 0;
+    return loanStatusUpdatePrincipal.remainingPayments[0]?.principal || 0;
+  };
+
+  const getNextPaymentInterest = () => {
+    if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 0;
+    return loanStatusUpdatePrincipal.remainingPayments[0]?.interest || 0;
+  };
+
+  const getRemainingInstallments = () => {
+    if (!loanStatusUpdatePrincipal?.remainingPayments) return 0;
+    return loanStatusUpdatePrincipal.remainingPayments.length;
+  };
+
+  const getTotalRemainingAmount = () => {
+    if (!loanStatusUpdatePrincipal?.remainingPayments) return 0;
+    return loanStatusUpdatePrincipal.remainingPayments.reduce(
+      (sum, payment) => sum + payment.expected_amount,
+      0
+    );
+  };
+
+  // Prevent form submission on Enter key
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+    }
+  };
+
+  const handleLoanChange = (loanId: string) => {
+    form.setValue('loan', loanId);
+    form.setValue('different_payment', false);
+    handleFormChange();
   };
 
   if (isLoading) {
     return (
-      <div className='flex justify-center items-center p-8'>
+      <div className='flex items-center justify-center p-8'>
         <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900' />
       </div>
     );
@@ -168,8 +138,8 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
+            onKeyDown={handleKeyDown}
             className='space-y-6'
-            onChange={handleFormChange}
           >
             {/* Member and Date Selection */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
@@ -239,37 +209,57 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
               />
             </div>
 
-            {/* Loan Selection and Payment Fields */}
+            {/* Loan Selection and Different Payment Option */}
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-              <FormField
-                control={form.control}
-                name='loan'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Préstamo</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
+              <div className='space-y-4'>
+                <FormField
+                  control={form.control}
+                  name='loan'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Préstamo</FormLabel>
+                      <Select
+                        onValueChange={(value) => handleLoanChange(value)}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder='Seleccionar préstamo' />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {loans.map((loan) => (
+                            <SelectItem
+                              key={loan.id}
+                              value={loan.id}
+                            >
+                              {`${loan.loan_type} - ${loan.amount} soles - ${loan.number_of_installments} cuotas`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='different_payment'
+                  render={({ field }) => (
+                    <FormItem className='flex flex-row items-start space-x-3 space-y-0 rounded-md'>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder='Seleccionar préstamo' />
-                        </SelectTrigger>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {loans.map((loan) => (
-                          <SelectItem
-                            key={loan.id}
-                            value={loan.id}
-                          >
-                            {`${loan.loan_number} - ${loan.loan_code} - ${loan.loan_type} - ${loan.amount} soles - ${loan.number_of_installments} cuotas`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
+                      <div className='space-y-1 leading-none'>
+                        <FormLabel>Pago Diferente</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
@@ -277,11 +267,19 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Cuota pago de capital</FormLabel>
+
                     <FormControl>
                       <InputAmount
                         type='number'
                         {...field}
+                        value={
+                          field.value.toFixed(2) || getNextPaymentPrincipal()
+                        }
                         onChange={(e) => field.onChange(Number(e.target.value))}
+                        disabled={!form.watch('different_payment')}
+                        className={
+                          !form.watch('different_payment') ? 'bg-gray-100' : ''
+                        }
                       />
                     </FormControl>
                   </FormItem>
@@ -298,7 +296,9 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
                       <InputAmount
                         type='number'
                         {...field}
+                        value={field.value || getNextPaymentInterest()}
                         onChange={(e) => field.onChange(Number(e.target.value))}
+                        disabled={!form.watch('different_payment')}
                       />
                     </FormControl>
                   </FormItem>
@@ -306,100 +306,49 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
               />
             </div>
 
-            {/* Payment Options */}
-            <div className='space-y-4 flex gap-20 ml-1'>
-              <div className='flex space-x-6 items-center'>
-                <span className='text-sm text-gray-500'>
-                  Saldo pendiente: S/. {saldo ? saldo.toFixed(2) : 'S/. 0.00'}
-                </span>
-              </div>
-            </div>
+            {/* Summary Boxes */}
+            {loanStatusUpdatePrincipal && (
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                <Card className='p-4'>
+                  <CardContent className='pt-4'>
+                    <div className='text-sm text-gray-500 mb-1'>
+                      Cuotas pendientes
+                    </div>
+                    <div className='text-2xl font-semibold'>
+                      {getRemainingInstallments()}
+                    </div>
+                  </CardContent>
+                </Card>
 
-            {/* Installments Section */}
-            {loanStatus && (
-              <div className='p-4'>
-                <div className='font-semibold mb-5 text-md'>Cuotas a pagar</div>
-                <div>
-                  <div className='grid grid-cols-7 text-xs md:text-sm mb-5 font-medium'>
-                    <p className='text-right'></p>
-                    <p className='text-left w-10 min-w-[64px]'>Cuota #</p>
-                    <p className='text-left w-20'>Fecha</p>
-                    <p className='text-left w-40'>Pago de capital</p>
-                    <p className='text-right w-10'>Interes</p>
-                    <p className='text-center w-10'>Cuota</p>
-                    <p className='text-left w-10'>Saldo</p>
-                  </div>
+                <Card className='p-4'>
+                  <CardContent className='pt-4'>
+                    <div className='text-sm text-gray-500 mb-1'>
+                      Saldo pendiente de pago
+                    </div>
+                    <div className='text-2xl font-semibold'>
+                      S/. {getTotalRemainingAmount().toFixed(2)}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  {loanStatus?.remainingPayments &&
-                    loanStatus.remainingPayments.map((installment: Payment) => (
-                      <div
-                        key={installment.id}
-                        className='grid grid-cols-7 text-xs md:text-sm py-4 border-b border-gray-100 overflow-x-auto'
-                      >
-                        <p className='text-left w-0'>
-                          <FormField
-                            control={form.control}
-                            name='checkValue'
-                            render={({ field }) => (
-                              <FormControl>
-                                <Checkbox
-                                  name={installment.id}
-                                  checked={field.value}
-                                  onCheckedChange={() =>
-                                    handleCuotaCheck(installment, field.value)
-                                  }
-                                />
-                              </FormControl>
-                            )}
-                          />
-                        </p>
-                        <p className='text-center w-5'>
-                          {installment.installment_number}
-                        </p>
-                        <p className='text-left min-w-[64px] text-xs md:text-sm w-10 mr-10'>
-                          {format(new Date(installment.due_date), 'dd/MM/yyyy')}
-                        </p>
-                        <p className='text-right w-10'>
-                          {installment.principal.toFixed(2)}
-                        </p>
-                        <p className='text-right w-10'>
-                          {installment.interest.toFixed(2)}
-                        </p>
-                        <p className='text-center w-10'>
-                          {installment.expected_amount.toFixed(2)}
-                        </p>
-                        <p className='text-center w-10'>
-                          {/* {(saldo - installment.expected_amount).toFixed(2)} */}
-                        </p>
-                      </div>
-                    ))}
-                  <div className='grid grid-cols-7 text-xs md:text-sm py-4 border-b border-gray-100 font-bold'>
-                    <p className='text-left w-0'></p>
-                    <p className='text-center w-5'></p>
-                    <p className='text-left w-20'>Totales</p>
-                    <p className='text-right w-10'>
-                      {' '}
-                      {loanStatus.remainingAmount.toFixed(2)}
-                    </p>
-                    <p className='text-right w-10'>{interesPagado}</p>
-                    <p className='text-center w-10'> {saldo}</p>
-                    <p className='text-center w-10'>
-                      {(
-                        totalPrestamo(
-                          form.getValues('loan'),
-                          form.getValues('member')
-                        ) - saldo
-                      ).toFixed(2)}
-                    </p>
-                  </div>
-                </div>
+                <Card className='p-4'>
+                  <CardContent className='pt-4'>
+                    <div className='text-sm text-gray-500 mb-1'>
+                      Monto proxima cuota
+                    </div>
+                    <div className='text-2xl font-semibold'>
+                      S/. {getNextPaymentAmount().toFixed(2)}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             )}
 
             <Button
-              type='submit'
-              className='w-auto'
+              type='button'
+              className='w-auto bg-black text-white'
               disabled={isLoading}
+              onClick={form.handleSubmit(onSubmit)}
             >
               {isLoading ? 'Procesando...' : 'Registrar Pago'}
             </Button>
@@ -445,7 +394,7 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
                     </TableCell>
                     <TableCell>{payment.principal_paid.toFixed(2)}</TableCell>
                     <TableCell>{payment.interest_paid.toFixed(2)}</TableCell>
-                    <TableCell>0</TableCell>
+                    <TableCell>0.00</TableCell>
                     <TableCell>{payment.amount.toFixed(2)}</TableCell>
                     <TableCell>{payment.remaining_amount.toFixed(2)}</TableCell>
                     <TableCell>{payment.remaining_installments}</TableCell>
@@ -463,26 +412,26 @@ const PagosSection: React.FC<PagosSectionProps> = ({ juntaId }) => {
                   </TableRow>
                 ))
               )}
-              <TableRow className='bg-gray-100'>
-                <TableCell
-                  colSpan={11}
-                  className='text-center'
-                >
-                  <span className='font-bold'>Total</span>
-                  <span className='ml-2 font-bold'>
-                    S/.{' '}
-                    {paymentHistory
-                      .reduce((acc, payment) => acc + payment.amount, 0)
-                      .toFixed(2)}
-                  </span>
-                </TableCell>
-              </TableRow>
+              {paymentHistory.length > 0 && (
+                <TableRow className='bg-gray-100'>
+                  <TableCell
+                    colSpan={11}
+                    className='text-center'
+                  >
+                    <span className='font-bold'>Total</span>
+                    <span className='ml-2 font-bold'>
+                      S/.{' '}
+                      {paymentHistory
+                        .reduce((acc, payment) => acc + payment.amount, 0)
+                        .toFixed(2)}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
       </div>
     </div>
   );
-};
-
-export default PagosSection;
+}

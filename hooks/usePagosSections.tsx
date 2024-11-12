@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useFieldArray, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { api } from '@/utils/api';
@@ -12,7 +12,6 @@ import type {
   Prestamo,
   MemberResponse as Member,
 } from '@/types';
-import { useFormField } from '@/components/ui/form';
 
 const formSchema = z.object({
   date: z.date(),
@@ -20,9 +19,7 @@ const formSchema = z.object({
   loan: z.string().min(1, { message: 'Por favor seleccione un préstamo' }),
   capital_payment: z.number().min(0, { message: 'Ingrese un monto válido' }),
   interest_payment: z.number().min(0, { message: 'Ingrese un monto válido' }),
-  is_late_payment: z.boolean().default(false),
   different_payment: z.boolean().default(false),
-  checkValue: z.boolean().default(false),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -40,13 +37,10 @@ export const usePagos = (juntaId: string) => {
       loan: '',
       capital_payment: 0,
       interest_payment: 0,
-      is_late_payment: false,
       different_payment: false,
-      checkValue: false,
     },
   });
 
-  // Queries
   const { data: members = [], isLoading: isLoadingMembers } = useQuery<
     Member[]
   >({
@@ -84,7 +78,6 @@ export const usePagos = (juntaId: string) => {
   } = useQuery<LoanStatus>({
     queryKey: ['loan-status', selectedPrestamoId],
     queryFn: async () => {
-      console.log('selectedPrestamoId: ', selectedPrestamoId);
       const response = await api.get(
         `prestamos/${selectedPrestamoId}/remaining-payments`
       );
@@ -94,23 +87,15 @@ export const usePagos = (juntaId: string) => {
     staleTime: 0,
   });
 
-  const refetch = async () => {
-    await Promise.all([
-      refetchLoanStatus(),
-      queryClient.invalidateQueries({ queryKey: ['payment-history', juntaId] }),
-      queryClient.invalidateQueries({ queryKey: ['junta', juntaId] }),
-      queryClient.invalidateQueries({
-        queryKey: ['loan-status', selectedPrestamoId],
-      }),
-    ]);
-  };
-
-  // Mutations
   const createPaymentMutation = useMutation({
     mutationFn: async (values: FormData) => {
       const amount = values.capital_payment + values.interest_payment;
       return api.post(`prestamos/${selectedPrestamoId}/pagos`, {
         amount: amount,
+        principal_paid: values.capital_payment,
+        interest_paid: values.interest_payment,
+        date: values.date,
+        is_different_payment: values.different_payment,
       });
     },
     onSuccess: () => {
@@ -141,9 +126,7 @@ export const usePagos = (juntaId: string) => {
       queryClient.invalidateQueries({
         queryKey: ['loan-status', selectedPrestamoId],
       });
-      queryClient.invalidateQueries({
-        queryKey: ['junta', juntaId],
-      });
+      queryClient.invalidateQueries({ queryKey: ['junta', juntaId] });
       toast({
         title: 'Pago eliminado',
         description: 'El pago se ha eliminado exitosamente.',
@@ -158,44 +141,10 @@ export const usePagos = (juntaId: string) => {
     },
   });
 
-  // Handlers
   const handleFormChange = () => {
-    const memberId = form.getValues('member');
     const loanId = form.getValues('loan');
-    console.log('loanId: ', loanId);
-
     if (loanId) {
       setSelectedPrestamoId(loanId);
-    }
-  };
-
-  const handleCuotaCheck = (installment: Payment, field: boolean) => {
-    if (installment) {
-      form.setValue(
-        'capital_payment',
-        parseFloat(installment.principal.toFixed(2))
-      );
-      form.setValue(
-        'interest_payment',
-        parseFloat(installment.interest.toFixed(2))
-      );
-
-      if (
-        loanStatusUpdatePrincipal?.remainingPayments &&
-        installment.id !== loanStatusUpdatePrincipal.remainingPayments[0].id
-      ) {
-        toast({
-          title: 'Pago cuota',
-          description:
-            'Solo puede seleccionar la cuota que le corresponde pagar antes de poder pagar otras cuotas',
-        });
-      } else {
-        const checkValue = form.getFieldState('checkValue');
-        console.log('checkValue: ', checkValue);
-        console.log('field: ', field);
-
-        // form.setValue('checkValue', !field);
-      }
     }
   };
 
@@ -215,7 +164,9 @@ export const usePagos = (juntaId: string) => {
     isLoadingMembers ||
     isLoadingLoans ||
     isLoadingHistory ||
-    isLoadingLoanStatus;
+    isLoadingLoanStatus ||
+    createPaymentMutation.isPending ||
+    deletePaymentMutation.isPending;
 
   return {
     form,
@@ -223,10 +174,9 @@ export const usePagos = (juntaId: string) => {
     loans: filteredLoans,
     refetchLoanStatus,
     paymentHistory,
-    loanStatusUpdatePrincipal, // Changed from loanStatus
+    loanStatusUpdatePrincipal,
     isLoading,
     handleFormChange,
-    handleCuotaCheck,
     handleDeletePago,
     onSubmit,
   };

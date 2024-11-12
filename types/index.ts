@@ -36,6 +36,12 @@ export interface Member {
   updatedAt: string;
 }
 
+export interface MemberInfo {
+  acciones: number; // Number of shares
+  accionesValue: number; // Total value of shares
+  prestamosValue: number; // Total value of loans
+}
+
 export interface MemberResponse {
   id: string;
   username: string;

@@ -9,14 +9,15 @@ import type {
   CreateLoanPayload,
   Member,
   MemberResponse,
+  MemberInfo,
   Prestamo,
-  ApiResponse,
+  Accion,
 } from '@/types';
 
 export const usePrestamos = (juntaId: string) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { monthlyInterestRate } = useBoardConfig();
+  const { monthlyInterestRate, shareValue } = useBoardConfig();
 
   const initialFormData: LoanFormData = {
     memberId: '',
@@ -34,10 +35,8 @@ export const usePrestamos = (juntaId: string) => {
 
   const [formData, setFormData] = useState<LoanFormData>(initialFormData);
 
-  // Queries
-  const { data: members = [], isLoading: isLoadingMembers } = useQuery<
-    MemberResponse[]
-  >({
+  // Query for members
+  const { data: members = [], isLoading: isLoadingMembers } = useQuery({
     queryKey: ['members', juntaId],
     queryFn: async () => {
       const response = await api.get<MemberResponse[]>(
@@ -47,9 +46,8 @@ export const usePrestamos = (juntaId: string) => {
     },
   });
 
-  const { data: prestamos = [], isLoading: isLoadingPrestamos } = useQuery<
-    Prestamo[]
-  >({
+  // Query for prestamos
+  const { data: prestamos = [], isLoading: isLoadingPrestamos } = useQuery({
     queryKey: ['prestamos', juntaId],
     queryFn: async () => {
       const response = await api.get<Prestamo[]>(`prestamos/junta/${juntaId}`);
@@ -57,7 +55,68 @@ export const usePrestamos = (juntaId: string) => {
     },
   });
 
-  // Mutations
+  // Query for acciones
+  const { data: acciones = [], isLoading: isLoadingAcciones } = useQuery({
+    queryKey: ['acciones', juntaId],
+    queryFn: async () => {
+      const response = await api.get<Accion[]>(`acciones/junta/${juntaId}`);
+      return Array.isArray(response) ? response : [];
+    },
+    staleTime: 0,
+  });
+
+  // Calculate member info using acciones data
+  const calculateMemberInfo = (memberId: string): MemberInfo => {
+    // Get member's acciones
+    const memberAcciones = acciones.filter(
+      (accion) => accion.memberId === memberId
+    );
+
+    // Calculate total acciones count and value
+    const accionesCount = memberAcciones.reduce(
+      (sum, accion) => sum + accion.amount,
+      0
+    );
+    const accionesValue = memberAcciones.reduce(
+      (sum, accion) => sum + accion.amount * accion.shareValue,
+      0
+    );
+
+    // Calculate active loans value
+    const prestamosValue = prestamos
+      .filter(
+        (prestamo) =>
+          prestamo.memberId === memberId &&
+          ['PARTIAL', 'PENDING'].includes(prestamo.status)
+      )
+      .reduce((sum, prestamo) => sum + Number(prestamo.amount), 0);
+
+    return {
+      acciones: accionesCount,
+      accionesValue,
+      prestamosValue,
+    };
+  };
+
+  // Calculate info for selected member and aval
+  const selectedMemberInfo = formData.memberId
+    ? calculateMemberInfo(formData.memberId)
+    : {
+        acciones: 0,
+        accionesValue: 0,
+        prestamosValue: 0,
+      };
+
+  const avalMemberInfo =
+    formData.guaranteeType === 'AVAL' && formData.guaranteeDetail
+      ? calculateMemberInfo(formData.guaranteeDetail)
+      : {
+          acciones: 0,
+          accionesValue: 0,
+          prestamosValue: 0,
+        };
+
+  // Mutation for creating loan
   const createLoanMutation = useMutation({
     mutationFn: async (data: LoanFormData) => {
       const payload: CreateLoanPayload = {
@@ -75,17 +134,12 @@ export const usePrestamos = (juntaId: string) => {
         form_cost: data.formCost,
         payment_type: 'MENSUAL',
       };
-      console.log('payload: ', payload);
 
-      return api.post<ApiResponse<Prestamo>>('prestamos', payload);
+      return api.post('prestamos', payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prestamos', juntaId] });
-      queryClient.invalidateQueries({ queryKey: ['junta', juntaId] });
       queryClient.invalidateQueries({ queryKey: ['acciones', juntaId] });
-      queryClient.invalidateQueries({
-        queryKey: ['payment-history', juntaId],
-      });
       toast({
         title: 'Éxito',
         description: 'Préstamo registrado correctamente',
@@ -101,11 +155,11 @@ export const usePrestamos = (juntaId: string) => {
     },
   });
 
+  // Mutation for deleting loan
   const deleteLoanMutation = useMutation({
     mutationFn: (id: string) => api.delete(`prestamos/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prestamos', juntaId] });
-      queryClient.invalidateQueries({ queryKey: ['junta', juntaId] });
       toast({
         title: 'Éxito',
         description: 'Préstamo eliminado correctamente',
@@ -134,18 +188,9 @@ export const usePrestamos = (juntaId: string) => {
     >
   ) => {
     const { name, value, type } = e.target;
-    console.log('value: ', value);
-    console.log('name: ', name);
-    const cleanValue = value.replace(/\D/g, '');
-
-    // Remove leading zeros
-    const formattedValue = cleanValue.replace(/^0+/, '');
     updateFormData({
       [name]: type === 'number' ? parseFloat(value) || 0 : value,
     });
-    // updateFormData({
-    //   [name]: formattedValue,
-    // });
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -157,18 +202,62 @@ export const usePrestamos = (juntaId: string) => {
     deleteLoanMutation.mutate(id);
   };
 
+  const calculateLoanValidation = (
+    memberId: string,
+    requestedAmount: number
+  ) => {
+    const memberAcciones = acciones.filter(
+      (accion) => accion.memberId === memberId
+    );
+
+    // Calculate total acciones value
+    const accionesValue = memberAcciones.reduce(
+      (sum, accion) => sum + accion.amount * accion.shareValue,
+      0
+    );
+
+    // Calculate active loans value
+    const activePrestamosValue = prestamos
+      .filter(
+        (prestamo) =>
+          prestamo.memberId === memberId &&
+          ['PARTIAL', 'PENDING'].includes(prestamo.status)
+      )
+      .reduce((sum, prestamo) => sum + Number(prestamo.amount), 0);
+
+    // Total debt including requested amount
+    const totalDebt = activePrestamosValue + requestedAmount;
+
+    return {
+      exceedsLimit: totalDebt > accionesValue,
+      totalDebt,
+      accionesValue,
+    };
+  };
+
+  const memberValidation = formData.memberId
+    ? calculateLoanValidation(formData.memberId, formData.amount)
+    : { exceedsLimit: false, totalDebt: 0, accionesValue: 0 };
+
+  const isLoading =
+    isLoadingMembers ||
+    isLoadingPrestamos ||
+    isLoadingAcciones ||
+    createLoanMutation.isPending ||
+    deleteLoanMutation.isPending;
+
   return {
     formData,
     members,
     prestamos,
-    isLoading:
-      isLoadingMembers ||
-      isLoadingPrestamos ||
-      createLoanMutation.isPending ||
-      deleteLoanMutation.isPending,
+    selectedMemberInfo,
+    avalMemberInfo,
+    isLoading,
     updateFormData,
     handleInputChange,
     handleSubmit,
     handleDeleteLoan,
+    memberValidation,
+    calculateLoanValidation,
   };
 };

@@ -53,19 +53,29 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
     totalValue,
   } = useAccionesSection(juntaId);
 
-  // Add state to track the calculated value
-  const [calculatedValue, setCalculatedValue] = useState(0);
+  const [calculatedValue, setCalculatedValue] = useState(shareValue);
 
-  // Watch for changes in the amount field
+  // Handle form submission
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    form.handleSubmit(onSubmit)(e);
+  };
+
+  // Prevent form submission on Enter key
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+    }
+  };
+
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === 'amount') {
-        const amount = Number(value.amount) || 0;
+        const amount = Number(value.amount) || 1;
         setCalculatedValue(amount * shareValue);
       }
     });
 
-    // Initialize the calculated value
     setCalculatedValue(Number(form.getValues('amount')) * shareValue);
 
     return () => subscription.unsubscribe();
@@ -86,7 +96,8 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
 
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={handleSubmit}
+            onKeyDown={handleKeyDown}
             className='space-y-6'
           >
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
@@ -175,6 +186,7 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name='amount'
@@ -190,7 +202,12 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                         value={field.value || 1}
                         onChange={(e) => {
                           const value = Number(e.target.value);
-                          field.onChange(value < 1 ? 1 : value); // Ensure minimum value is 1
+                          field.onChange(value < 1 ? 1 : value);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                          }
                         }}
                         className='h-10'
                         min='1'
@@ -199,6 +216,7 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                   </FormItem>
                 )}
               />
+
               <div>
                 <FormLabel className='text-gray-700'>
                   Valor de Acciones
@@ -208,14 +226,20 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                   value={calculatedValue.toFixed(2)}
                   disabled
                   className='h-10'
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                    }
+                  }}
                 />
               </div>
             </div>
 
             <Button
-              type='submit'
+              type='button' // Changed from "submit" to "button"
               className='bg-black text-white'
               disabled={isLoading}
+              onClick={handleSubmit}
             >
               {isLoading ? 'Procesando...' : 'Comprar Acciones'}
             </Button>

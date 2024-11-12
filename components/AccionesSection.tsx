@@ -34,6 +34,7 @@ import {
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { useAccionesSection } from '@/hooks/useAccionesSection';
+import { useState, useEffect } from 'react';
 
 interface AccionesSectionProps {
   juntaId: string;
@@ -51,6 +52,24 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
     totalShares,
     totalValue,
   } = useAccionesSection(juntaId);
+
+  // Add state to track the calculated value
+  const [calculatedValue, setCalculatedValue] = useState(0);
+
+  // Watch for changes in the amount field
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'amount') {
+        const amount = Number(value.amount) || 0;
+        setCalculatedValue(amount * shareValue);
+      }
+    });
+
+    // Initialize the calculated value
+    setCalculatedValue(Number(form.getValues('amount')) * shareValue);
+
+    return () => subscription.unsubscribe();
+  }, [form, shareValue]);
 
   if (isLoading) {
     return (
@@ -156,7 +175,6 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name='amount'
@@ -169,24 +187,25 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
                       <Input
                         type='number'
                         {...field}
-                        value={field.value || ''}
-                        onChange={(e) =>
-                          field.onChange(Number(e.target.value) || 0)
-                        }
+                        value={field.value || 1}
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+                          field.onChange(value < 1 ? 1 : value); // Ensure minimum value is 1
+                        }}
                         className='h-10'
+                        min='1'
                       />
                     </FormControl>
                   </FormItem>
                 )}
               />
-
               <div>
                 <FormLabel className='text-gray-700'>
                   Valor de Acciones
                 </FormLabel>
                 <Input
                   type='number'
-                  value={shareValue}
+                  value={calculatedValue.toFixed(2)}
                   disabled
                   className='h-10'
                 />

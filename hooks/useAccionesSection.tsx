@@ -58,7 +58,7 @@ export const useAccionesSection = (
     defaultValues: {
       memberId: 'no-members',
       date: new Date(),
-      amount: 0,
+      amount: 1,
       description: '',
     },
   });

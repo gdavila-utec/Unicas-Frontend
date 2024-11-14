@@ -71,7 +71,14 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
         <CardHeader className='bg-primary text-primary-foreground'>
           <div className='flex items-center justify-between'>
             <CardTitle className='text-2xl sm:text-3xl font-bold flex gap-4'>
-              <span className=''>UNICA Vecinal Dashboard</span>
+              {isLoading ? (
+                <Skeleton className='h-8 w-2/3 mb-4' />
+              ) : (
+                <h2 className='text-xl font-semibold mb-4'>
+                  {junta ? junta.name : 'No junta encontrada'}
+                </h2>
+              )}
+              {/* <span className=''>UNICA Vecinal Dashboard</span> */}
               {/* <span className=' sm:text-base font-normal  text-sm font-bold bg-white text-gray-900 px-4 py-2  rounded ml-40'>
                 {availableCapital
                   ? 'S/.' + availableCapital.toFixed(2)
@@ -79,7 +86,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
               </span> */}
             </CardTitle>
             <Link href='/'>
-              <Button
+              {/* <Button
                 variant='secondary'
                 size='sm'
                 className='hidden sm:flex items-center gap-2 rounded-md'
@@ -88,34 +95,26 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
                 {availableCapital
                   ? 'S/.' + availableCapital.toFixed(2)
                   : 'S/. 0.00 '}
-              </Button>
+              </Button> */}
             </Link>
             <Link href='/'>
               <Button
                 variant='secondary'
                 size='sm'
-                className='hidden sm:flex items-center gap-2'
+                className='hidden sm:flex items-center gap-2 rounded bg-gray-800 text-primary-foreground'
               >
-                <ChevronLeft className='w-4 h-4' />
-                Todas las juntas
+                {/* <ChevronLeft className='w-4 h-4' /> */}
+                Cerrar sesion
               </Button>
             </Link>
           </div>
         </CardHeader>
         <CardContent className='pt-6'>
-          {isLoading ? (
-            <Skeleton className='h-8 w-2/3 mb-4' />
-          ) : (
-            <h2 className='text-xl font-semibold mb-4'>
-              {junta ? junta.name : 'No junta encontrada'}
-            </h2>
-          )}
-
           <Tabs
             defaultValue='resumen'
             className='w-full'
           >
-            <TabsList className='grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 mb-6'>
+            {/* <TabsList className='grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 mb-6'>
               {tabItems.map((item) => (
                 <TabsTrigger
                   key={item.value}
@@ -126,7 +125,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
                   <span className='hidden sm:inline'>{item.label}</span>
                 </TabsTrigger>
               ))}
-            </TabsList>
+            </TabsList> */}
 
             <Card className='bg-white shadow-sm'>
               <CardContent className='p-4 sm:p-6'>
@@ -134,7 +133,7 @@ const UNICAVecinalDashboard = ({ params }: { params: { id: string } }) => {
                   <ResumenSection juntaId={params.id} />
                 </TabsContent>
                 <TabsContent value='socios'>
-                  <MemberSection juntaId={params.id} />
+                  {/* <MemberSection juntaId={params.id, } /> */}
                 </TabsContent>
                 <TabsContent value='prestamos'>
                   <PrestamosSection juntaId={params.id} />

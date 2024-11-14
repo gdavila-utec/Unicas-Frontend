@@ -511,7 +511,7 @@ export interface Payment {
   interest: number;
   installment_number: number;
   prestamoId: string;
-  status: 'PENDING' | 'PAID' | 'OVERDUE';
+  status: 'PENDING' | 'PAID' | 'OVERDUE' | 'PARTIAL';
   createdAt: string;
   updatedAt: string;
   checkValue: boolean;

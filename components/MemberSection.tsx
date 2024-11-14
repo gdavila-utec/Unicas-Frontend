@@ -1,358 +1,231 @@
+// components/MemberSection.tsx
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useAuth } from '@/hooks/useAuth';
-import { useMembersSection } from '@/hooks/useMembersSection';
-import MembersList from './MemberList';
-import { MemberRole, DocumentType, Gender } from '@/types';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { useMemberSection } from '@/hooks/useMemberSection';
 
-const MemberSection = ({ juntaId }: { juntaId: string }) => {
-  const { isAuthenticated } = useAuth();
-  const {
-    members,
-    isLoading,
-    newMember,
-    isEditing,
-    handleEditClick,
-    handleSubmit,
-    handleDeleteMember,
-    setNewMember,
-    resetForm,
-    formatDateForInput,
-  } = useMembersSection(juntaId);
+interface MemberSectionProps {
+  memberId: string;
+  juntaId: string;
+}
 
-  if (!isAuthenticated) {
+const MemberSection: React.FC<MemberSectionProps> = ({ memberId, juntaId }) => {
+  const router = useRouter();
+  const { memberDetail, summary, members, prestamos, isLoading } =
+    useMemberSection(memberId, juntaId);
+
+  if (isLoading || !memberDetail) {
     return (
-      <Card>
-        <CardContent className='py-4'>
-          <p className='text-center text-muted-foreground'>
-            Por favor inicie sesión para ver esta sección
-          </p>
-        </CardContent>
-      </Card>
+      <div className='flex justify-center items-center p-8'>
+        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900' />
+      </div>
     );
   }
 
   return (
-    <div className='flex flex-col gap-4'>
+    <div className='space-y-8'>
+      {/* Profile Information */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            {isEditing ? 'Editar Miembro' : 'Agregar Miembro'}
-          </CardTitle>
+          <CardTitle>Perfil del Socio</CardTitle>
         </CardHeader>
         <CardContent>
-          <form
-            onSubmit={handleSubmit}
-            className='space-y-6'
+          <div className='grid grid-cols-2 gap-4'>
+            <div>
+              <p className='text-sm text-gray-500'>Nombre</p>
+              <p className='font-medium'>{memberDetail.user.full_name}</p>
+            </div>
+            <div>
+              <p className='text-sm text-gray-500'>DNI</p>
+              <p className='font-medium'>{memberDetail.user.document_number}</p>
+            </div>
+            <div>
+              <p className='text-sm text-gray-500'>Celular</p>
+              <p className='font-medium'>{memberDetail.user.phone}</p>
+            </div>
+            <div>
+              <p className='text-sm text-gray-500'>Cargo</p>
+              <p className='font-medium'>{memberDetail.cargo}</p>
+            </div>
+            <div>
+              <p className='text-sm text-gray-500'>Fecha de Ingreso</p>
+              <p className='font-medium'>
+                {new Date(memberDetail.fecha_ingreso).toLocaleDateString()}
+              </p>
+            </div>
+            <div>
+              <p className='text-sm text-gray-500'>Actividad Productiva</p>
+              <p className='font-medium'>{memberDetail.actividad_productiva}</p>
+            </div>
+          </div>
+
+          <Button
+            variant='outline'
+            className='mt-4'
+            onClick={() => router.push(`/socios`)}
           >
-            <div>
-              <h3 className='text-lg font-medium'>Información del Miembro</h3>
-              <div className='grid grid-cols-2 gap-4 mt-4'>
-                <div>
-                  <Label htmlFor='full_name'>Nombre Completo</Label>
-                  <Input
-                    id='full_name'
-                    value={newMember.full_name}
-                    onChange={(e) =>
-                      setNewMember({ ...newMember, full_name: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor='document_type'>Tipo de Documento</Label>
-                  <Select
-                    value={newMember.document_type}
-                    onValueChange={(value: DocumentType) => {
-                      setNewMember({ ...newMember, document_type: value });
-                    }}
-                  >
-                    <SelectTrigger id='document_type'>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='DNI'>DNI</SelectItem>
-                      <SelectItem value='CE'>CE</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor='document_number'>Número de Documento</Label>
-                  <Input
-                    id='document_number'
-                    value={newMember.document_number}
-                    onChange={(e) =>
-                      setNewMember({
-                        ...newMember,
-                        document_number: e.target.value,
-                      })
-                    }
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor='role'>Cargo</Label>
-                  <Select
-                    value={newMember.role}
-                    onValueChange={(value: MemberRole) =>
-                      setNewMember({ ...newMember, role: value })
-                    }
-                  >
-                    <SelectTrigger id='role'>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='socio'>Socio</SelectItem>
-                      <SelectItem value='presidente'>Presidente</SelectItem>
-                      <SelectItem value='tesorero'>Tesorero</SelectItem>
-                      <SelectItem value='secretario'>Secretario</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor='productive_activity'>
-                    Actividad Productiva
-                  </Label>
-                  <Input
-                    id='productive_activity'
-                    value={newMember.productive_activity}
-                    onChange={(e) =>
-                      setNewMember({
-                        ...newMember,
-                        productive_activity: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor='birth_date'>Fecha de Nacimiento</Label>
-                  <Input
-                    id='birth_date'
-                    type='date'
-                    value={formatDateForInput(newMember.birth_date)}
-                    onChange={(e) =>
-                      setNewMember({ ...newMember, birth_date: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor='phone'>Celular</Label>
-                  <Input
-                    id='phone'
-                    value={newMember.phone}
-                    onChange={(e) =>
-                      setNewMember({ ...newMember, phone: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor='address'>Dirección</Label>
-                  <Input
-                    id='address'
-                    value={newMember.address}
-                    onChange={(e) =>
-                      setNewMember({ ...newMember, address: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor='join_date'>Fecha de Ingreso</Label>
-                  <Input
-                    id='join_date'
-                    type='date'
-                    value={formatDateForInput(newMember.join_date)}
-                    onChange={(e) =>
-                      setNewMember({ ...newMember, join_date: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor='gender'>Género</Label>
-                  <Select
-                    value={newMember.gender}
-                    onValueChange={(value: Gender) =>
-                      setNewMember({ ...newMember, gender: value })
-                    }
-                  >
-                    <SelectTrigger id='gender'>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='Masculino'>Masculino</SelectItem>
-                      <SelectItem value='Femenino'>Femenino</SelectItem>
-                      <SelectItem value='Otro'>Otro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor='password'>Contraseña</Label>
-                  <Input
-                    id='password'
-                    type='password'
-                    value={newMember.password}
-                    onChange={(e) =>
-                      setNewMember({ ...newMember, password: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-              <div className='mt-4'>
-                <Label htmlFor='additional_info'>Información Adicional</Label>
-                <Textarea
-                  id='additional_info'
-                  value={newMember.additional_info}
-                  onChange={(e) =>
-                    setNewMember({
-                      ...newMember,
-                      additional_info: e.target.value,
-                    })
-                  }
-                  className='h-24'
-                />
-              </div>
-            </div>
-
-            <div>
-              <h3 className='text-lg font-medium'>
-                Información del Beneficiario
-              </h3>
-              <div className='grid grid-cols-2 gap-4 mt-4'>
-                <div>
-                  <Label htmlFor='beneficiary_full_name'>Nombre Completo</Label>
-                  <Input
-                    id='beneficiary_full_name'
-                    value={newMember.beneficiary.full_name}
-                    onChange={(e) =>
-                      setNewMember({
-                        ...newMember,
-                        beneficiary: {
-                          ...newMember.beneficiary,
-                          full_name: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor='beneficiary_document_type'>
-                    Tipo de Documento
-                  </Label>
-                  <Select
-                    value={newMember.beneficiary.document_type}
-                    onValueChange={(value: DocumentType) =>
-                      setNewMember({
-                        ...newMember,
-                        beneficiary: {
-                          ...newMember.beneficiary,
-                          document_type: value,
-                        },
-                      })
-                    }
-                  >
-                    <SelectTrigger id='beneficiary_document_type'>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='DNI'>DNI</SelectItem>
-                      <SelectItem value='CE'>CE</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor='beneficiary_document_number'>
-                    Número de Documento
-                  </Label>
-                  <Input
-                    id='beneficiary_document_number'
-                    value={newMember.beneficiary.document_number}
-                    onChange={(e) =>
-                      setNewMember({
-                        ...newMember,
-                        beneficiary: {
-                          ...newMember.beneficiary,
-                          document_number: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor='beneficiary_phone'>Celular</Label>
-                  <Input
-                    id='beneficiary_phone'
-                    value={newMember.beneficiary.phone}
-                    onChange={(e) =>
-                      setNewMember({
-                        ...newMember,
-                        beneficiary: {
-                          ...newMember.beneficiary,
-                          phone: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div className='col-span-2'>
-                  <Label htmlFor='beneficiary_address'>Dirección</Label>
-                  <Input
-                    id='beneficiary_address'
-                    value={newMember.beneficiary.address}
-                    onChange={(e) =>
-                      setNewMember({
-                        ...newMember,
-                        beneficiary: {
-                          ...newMember.beneficiary,
-                          address: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className='flex justify-end gap-2'>
-              {isEditing && (
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={resetForm}
-                >
-                  Cancelar
-                </Button>
-              )}
-              <Button
-                type='submit'
-                disabled={isLoading}
-              >
-                {isLoading
-                  ? 'Procesando...'
-                  : isEditing
-                  ? 'Actualizar Miembro'
-                  : 'Agregar Miembro'}
-              </Button>
-            </div>
-          </form>
+            Ver toda la información
+          </Button>
         </CardContent>
       </Card>
 
-      <MembersList
-        members={members}
-        onEdit={handleEditClick}
-        onDelete={handleDeleteMember}
-      />
+      {/* Summary Cards */}
+      <div className='grid grid-cols-2 gap-6'>
+        {/* Shares Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Acciones</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className='text-3xl font-bold'>{summary.acciones.count}</div>
+            <p className='text-sm text-gray-500 mt-2'>
+              Valor: S/. {summary.acciones.valor.toFixed(2)}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Active Loans Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Prestamos Activos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className='space-y-4'>
+              <div>
+                <div className='text-sm text-gray-500'>Monto solicitado</div>
+                <div className='text-lg font-semibold'>
+                  S/. {summary.prestamos_activos.monto_solicitado.toFixed(2)}
+                </div>
+              </div>
+              <div className='grid grid-cols-3 gap-4'>
+                <div>
+                  <div className='text-sm text-gray-500'>Monto adeudo</div>
+                  <div className='font-semibold'>
+                    S/. {summary.prestamos_activos.monto_adeudo.toFixed(2)}
+                  </div>
+                </div>
+                <div>
+                  <div className='text-sm text-gray-500'>Cuotas pendientes</div>
+                  <div className='font-semibold'>
+                    {summary.prestamos_activos.cuotas_pendientes}
+                  </div>
+                </div>
+                <div>
+                  <div className='text-sm text-gray-500'>
+                    Monto próxima cuota
+                  </div>
+                  <div className='font-semibold'>
+                    S/.{' '}
+                    {summary.prestamos_activos.monto_proxima_cuota.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Members and Shares Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Socios y Acciones</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Acciones</TableHead>
+                <TableHead>Valor en acciones</TableHead>
+                <TableHead>Cantidad de prestamos activos</TableHead>
+                <TableHead>Monto adeudado en prestamos</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {members.map((member) => (
+                <TableRow key={member.id}>
+                  <TableCell>{member.user.full_name}</TableCell>
+                  <TableCell>{summary.acciones.count}</TableCell>
+                  <TableCell>S/. {summary.acciones.valor.toFixed(2)}</TableCell>
+                  <TableCell>
+                    {
+                      prestamos.filter(
+                        (p) =>
+                          p.memberId === member.id &&
+                          ['PARTIAL', 'PENDING'].includes(p.status)
+                      ).length
+                    }
+                  </TableCell>
+                  <TableCell>
+                    S/. {summary.prestamos_activos.monto_adeudo.toFixed(2)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Active Loans Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Prestamos Activos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Socio</TableHead>
+                <TableHead>Monto solicitado</TableHead>
+                <TableHead>Monto adeudo</TableHead>
+                <TableHead>Cuotas pendientes</TableHead>
+                <TableHead>Monto de proxima cuota</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {prestamos
+                .filter((prestamo) =>
+                  ['PARTIAL', 'PENDING'].includes(prestamo.status)
+                )
+                .map((prestamo) => {
+                  const cuotasPendientes = prestamo.paymentSchedule.filter(
+                    (p) => !(p.status === 'PAID')
+                  ).length;
+                  const proximaCuota =
+                    prestamo.paymentSchedule.find(
+                      (p) => !!(p.status === 'PAID')
+                    )?.expected_amount || 0;
+                  return (
+                    <TableRow key={prestamo.id}>
+                      <TableCell>{memberDetail.user.full_name}</TableCell>
+                      <TableCell>
+                        S/. {Number(prestamo.amount).toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        S/.{' '}
+                        {prestamo.paymentSchedule
+                          .filter((p) => !!(p.status === 'PAID'))
+                          .reduce((sum, p) => sum + p.expected_amount, 0)
+                          .toFixed(2)}
+                      </TableCell>
+                      <TableCell>{cuotasPendientes}</TableCell>
+                      <TableCell>S/. {proximaCuota.toFixed(2)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 };

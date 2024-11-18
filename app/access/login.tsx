@@ -59,9 +59,6 @@ export default function LoginPage() {
         }
       );
       const data = await response.json();
-
-      console.log('Login response:', data);
-
       // Set auth state
       setAuth({
         token: data.token,

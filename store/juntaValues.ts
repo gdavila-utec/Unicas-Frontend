@@ -89,7 +89,6 @@ export const useJuntaStore = create<JuntaStore>()(
 
       getJuntaById: (juntaId) => {
         const store = get();
-        console.log('useJuntaStore store: ', store);
         return store.selectedJunta ?? null;
       },
 

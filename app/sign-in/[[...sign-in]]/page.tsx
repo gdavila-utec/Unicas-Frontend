@@ -63,13 +63,6 @@ export default function SignInPage() {
             : formData.phone_number,
       };
 
-      console.log('data sent: ', {
-        ...(loginMethod === 'email'
-          ? { email: formData.email }
-          : { phone: formattedData.phone_number }),
-        password: formData.password,
-      });
-
       const response = await axiosInstance.post<LoginResponse>('/auth/login', {
         ...(loginMethod === 'email'
           ? { email: formData.email }

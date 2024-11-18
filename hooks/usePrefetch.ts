@@ -16,7 +16,7 @@ const extractData = <T>(response: unknown): T => {
   }
 
   const axiosResponse = response as { data: T };
-  console.log('Response data:', axiosResponse.data);
+
 
   // Return the data directly since the API returns it in the correct format
   return axiosResponse.data;
@@ -24,7 +24,7 @@ const extractData = <T>(response: unknown): T => {
 
 // Helper to validate junta data
 const validateJunta = (data: unknown): Junta => {
-  console.log('Validating junta data:', data);
+
   if (!data || typeof data !== 'object') {
     throw new Error('Invalid junta data: not an object');
   }

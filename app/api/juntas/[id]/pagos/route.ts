@@ -64,7 +64,6 @@ export async function GET(
     }
 
     const paymentData = await response.json();
-    console.log(paymentData);
     return NextResponse.json(paymentData);
   } catch (error) {
     console.error('Error fetching payment data:', error);

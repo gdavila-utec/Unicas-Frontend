@@ -51,7 +51,6 @@ export default function AdminDashboard() {
           },
         });
         const data = await response.json();
-        console.log('data: ', data);
         setUsers(data);
         // Handle the data...
       } catch (error) {

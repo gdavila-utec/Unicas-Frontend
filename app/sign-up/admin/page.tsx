@@ -33,8 +33,6 @@ export default function AdminSignUpPage() {
           body: JSON.stringify(formData),
         }
       );
-
-      console.log('response: ', response);
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.message || 'Error en el registro');

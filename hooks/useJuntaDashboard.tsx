@@ -136,7 +136,6 @@ export const useJuntaDashboard = (juntaId: string): UseJuntaDashboardResult => {
   //   });
 
   // const refetch = async () => {
-  //   console.log('refetching junta data');
   //   await refetchJuntaData();
   // };
 

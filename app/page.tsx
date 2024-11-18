@@ -37,7 +37,6 @@ export default function Home() {
   const handleDeleteJunta = async (juntaId: string) => {
     try {
       const response = await api.delete(`juntas/${juntaId}`);
-      console.log('response: ', response);
       if (!response.ok) throw new Error('Failed to delete junta');
       handleRefetch();
       // setJuntasState(juntas.filter((j) => j.id.toString() !== juntaId));

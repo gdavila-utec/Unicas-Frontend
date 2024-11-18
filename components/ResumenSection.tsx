@@ -12,131 +12,47 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  UserCircle,
-  ClipboardList,
-  AlertCircle,
-  DollarSign,
-  FileText,
-  Calculator,
-  Building2,
-  PlusCircle,
-  FileSpreadsheet,
-  Users,
   PiggyBank,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useResumen } from '@/hooks/useResumenSection';
-const { useMemberSection } = require('@/hooks/useMemberSection');
+import type { Prestamo, Junta, MemberResponse, Member } from '@/types';
+import { InitialLoader } from '../components/initial-loader';
 
 interface ResumenProps {
   juntaId: string;
+  menuItems: {
+    label: string;
+    route: string;
+    icon: React.FC;
+    color: string;
+  }[];
 }
 
 const Resumen: React.FC<ResumenProps> = ({ juntaId }) => {
   const router = useRouter();
-  const { junta, members, activePrestamos, summary, isLoading } =
-    useResumen(juntaId);
-  // console.log('activePrestamos: ', activePrestamos);
-  console.log('summary: ', summary);
-  console.log('junta: ', junta);
-  const { memberDetail, prestamos } = useMemberSection(juntaId);
-  console.log('prestamos: ', prestamos);
-  console.log('memberDetail: ', memberDetail);
-
-  const menuItems = [
-    {
-      label: 'Socios',
-      icon: UserCircle,
-      route: `/socios`,
-      color: 'w-full justify-start bg-softGreen text-white',
-    },
-    {
-      label: 'Asistencia',
-      icon: ClipboardList,
-      route: `/asistencia`,
-      color: 'w-full justify-start bg-goldenYellow text-white',
-    },
-    {
-      label: 'Multas',
-      icon: AlertCircle,
-      route: `/multas`,
-      color: 'w-full justify-start bg-coralRed text-white',
-    },
-    {
-      label: 'Compra de Acciones',
-      icon: DollarSign,
-      route: `/acciones`,
-      color: 'w-full justify-start bg-violetPurple text-white',
-    },
-    {
-      label: 'Pago de Prestamos',
-      icon: FileText,
-      route: `/pagos`,
-      color: 'w-full justify-start bg-teal text-white',
-    },
-    {
-      label: 'Registrar Prestamo',
-      icon: Calculator,
-      route: `/prestamos`,
-      color: 'w-full justify-start bg-periwinkleBlue text-white',
-    },
-    {
-      label: 'Utilidades',
-      icon: Building2,
-      route: `/utilidades`,
-      color: 'w-full justify-start bg-limeGreen text-white',
-    },
-    {
-      label: 'Gastos Administrativos',
-      icon: PlusCircle,
-      route: `/gastos`,
-      color: 'w-full justify-start bg-burntOrange text-white',
-    },
-    {
-      label: 'Otros Ingresos',
-      icon: FileSpreadsheet,
-      route: `/ingresos`,
-      color: 'w-full justify-start bg-slateGray text-white',
-    },
-    {
-      label: 'Actas y Asambleas',
-      icon: Users,
-      route: `/actas`,
-      color: 'w-full justify-start bg-rosePink text-white',
-    },
-  ];
+  const {
+    sharesByMember,
+    junta,
+    members,
+    activePrestamos,
+    summary,
+    isLoading,
+  } = useResumen(juntaId);
 
   if (isLoading) {
     return (
-      <div className='flex justify-center items-center p-8'>
-        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900' />
-      </div>
+      <InitialLoader  />
     );
   }
 
   return (
-    <div className='flex h-screen'>
-      {/* Side Menu */}
-      <div className='w-64 bg-gray-100 p-4 space-y-2'>
-        {menuItems.map((item) => (
-          <Button
-            key={item.label}
-            variant='ghost'
-            className={item.color}
-            onClick={() => router.push(item.route)}
-          >
-            <item.icon className='mr-2 h-4 w-4' />
-            {item.label}
-          </Button>
-        ))}
-      </div>
-
+    <div className='flex lg:flex-row flex-col lg:h-screen h-fit'>
       {/* Main Content */}
       <div className='flex-1 p-8 space-y-6'>
         {/* Capital Summary Cards */}
-        <div className='grid grid-cols-3 gap-6'>
-          <div></div>
-          <Card className=''>
+        <div className='grid grid-cols-3 gap-6 '>
+          <Card className='w-full  col-span-3'>
             <CardContent className='pt-6 justify-center flex flex-col items-center gap-1'>
               <PiggyBank size={48} />
               <div className='text-lg text-gray-900 font-bol'>
@@ -150,31 +66,14 @@ const Resumen: React.FC<ResumenProps> = ({ juntaId }) => {
               </div>
               <div className='text-2xl font-bold'></div>
             </CardContent>
+            <Button
+              variant='default'
+              className='w-full bg-periwinkleBlue text-white'
+              onClick={() => router.push('/asambleas/nueva')}
+            >
+              Iniciar Asamblea
+            </Button>
           </Card>
-          <div></div> <div></div>
-          {/* <Card>
-            <CardContent className='pt-6'>
-              <div className='text-sm text-gray-500'>Reserva Capital</div>
-              <div className='text-2xl font-bold'>
-                S/. {summary.reserva_capital.toFixed(2)}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className='pt-6'>
-              <div className='text-sm text-gray-500'>Fondo Social</div>
-              <div className='text-2xl font-bold'>
-                S/. {summary.fondo_social.toFixed(2)}
-              </div>
-            </CardContent>
-          </Card> */}
-          <Button
-            variant='default'
-            className='w-full bg-periwinkleBlue text-white'
-            onClick={() => router.push('/asambleas/nueva')}
-          >
-            Iniciar Asamblea
-          </Button>
         </div>
         {/* Members Table */}
         <Card>
@@ -194,27 +93,28 @@ const Resumen: React.FC<ResumenProps> = ({ juntaId }) => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {members.map((member) => (
+                {sharesByMember.map((member) => (
                   <TableRow
-                    key={member.id}
+                    key={member.memberId}
                     className='cursor-pointer hover:bg-gray-50'
-                    onClick={() => router.push(`/socios/${member.id}`)}
+                    onClick={() => router.push(`/socios/${member.memberId}`)}
                   >
-                    <TableCell>{member?.user?.full_name}</TableCell>
-                    {/* <TableCell>{member.}</TableCell> */}
                     <TableCell>
-                      {/* S/. {member.user.acciones_value?.toFixed(2)} */}
+                      {member.memberInfo.fullName || 'No name available'}
                     </TableCell>
+                    <TableCell>{member.totalShares}</TableCell>
+                    <TableCell>S/. {member.totalValue.toFixed(2)}</TableCell>
                     <TableCell>
                       {
-                        activePrestamos.filter((p) => p.memberId === member.id)
-                          .length
+                        activePrestamos.filter(
+                          (p) => p.memberId === member.memberId
+                        ).length
                       }
                     </TableCell>
                     <TableCell>
                       S/.{' '}
                       {activePrestamos
-                        .filter((p) => p.memberId === member.id)
+                        .filter((p) => p.memberId === member.memberId)
                         .reduce((sum, p) => sum + Number(p.remaining_amount), 0)
                         .toFixed(2)}
                     </TableCell>
@@ -251,8 +151,8 @@ const Resumen: React.FC<ResumenProps> = ({ juntaId }) => {
                   >
                     <TableCell>
                       {
-                        // members.find((m) => m.id === prestamo.memberId)
-                        //   ?.full_name
+                        members.find((m) => m.id === prestamo.memberId)
+                          ?.full_name
                       }
                     </TableCell>
                     <TableCell>
@@ -261,13 +161,19 @@ const Resumen: React.FC<ResumenProps> = ({ juntaId }) => {
                     <TableCell>
                       S/. {Number(prestamo.remaining_amount).toFixed(2)}
                     </TableCell>
-                    {/* <TableCell>{prestamo.remaining_installments}</TableCell> */}
-                    {/* <TableCell>
+                    <TableCell>
+                      {
+                        prestamo.paymentSchedule.filter(
+                          (payment) => payment.status !== 'PAID'
+                        ).length
+                      }
+                    </TableCell>
+                    <TableCell>
                       S/.{' '}
                       {prestamo.paymentSchedule
-                        .find((p) => !p.paid)
+                        .find((p) => p.status !== 'PAID')
                         ?.expected_amount.toFixed(2) || '0.00'}
-                    </TableCell> */}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

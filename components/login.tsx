@@ -87,7 +87,6 @@ const EmailAuth = () => {
         setStep('verification');
         // Prepare verification
         // const verificationResponse = await signUp.prepareEmailAddressVerification();
-        // console.log('verificationResponse: ', verificationResponse);
         // if (verificationResponse.verificationFlow) {
         //   setStep('verification');
         // }

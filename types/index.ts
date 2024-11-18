@@ -1,5 +1,3 @@
-import { unknown } from 'zod';
-
 // User and Authentication Types
 export interface User {
   id: string;
@@ -34,6 +32,36 @@ export interface Member {
   join_date: string | null;
   createdAt: string;
   updatedAt: string;
+  full_name: string | null;
+  email: string | null;
+  document_type: DocumentType | null;
+  document_number: string | null;
+  phone: string | null;
+  address: string | null;
+  birth_date: string | null;
+}
+
+// Define the return type structure
+export interface SharesByMemberReturn {
+  memberId: string;
+  memberInfo: {
+    fullName: string | null;
+    documentNumber: string | null;
+    memberRole: MemberRole | null;
+    beneficiaryInfo: {
+      name: string | null;
+      document: string | null;
+      address: string | null;
+      phone: string | null;
+    };
+  };
+  shares: Array<{
+    amount: number;
+    shareValue: number;
+    date: string;
+    type: 'COMPRA' | 'VENTA';
+  }>;
+  totalShares: number;
 }
 
 export interface MemberInfo {

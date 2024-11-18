@@ -30,11 +30,6 @@ export default function TestPage() {
 
   useEffect(() => {
     // Log authentication state
-    console.log('Auth State:', {
-      isAuthenticated,
-      hasToken: !!token,
-    });
-
     // Log the actual requests being made
     console.log('API Requests:', {
       juntas: {

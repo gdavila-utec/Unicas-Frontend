@@ -194,7 +194,6 @@ export const useJuntasDashboard = (): UseJuntasDashboardResult => {
   });
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
-    console.log('handleDelete id: ', id);
     e.stopPropagation();
 
     const confirmed = window.confirm(

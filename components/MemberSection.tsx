@@ -18,7 +18,7 @@ interface MemberSectionProps {
   juntaId: string;
 }
 
-const MemberSection: React.FC<MemberSectionProps> = ({ memberId, juntaId }) => {
+const MemberSection: React.FC<MemberSectionProps> = ({memberId, juntaId }) => {
   const router = useRouter();
   const { memberDetail, summary, members, prestamos, isLoading } =
     useMemberSection(memberId, juntaId);

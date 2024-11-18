@@ -22,18 +22,10 @@ export function JuntaCard({
   onSelectJunta: (junta: Junta) => void;
   onDeleteJunta: (id: string, e: React.MouseEvent) => void;
 }) {
-  console.log(
-    'junta: ',
-    junta,
-    'junta card',
-    junta.available_capital,
-    'junta id',
-    junta.id
-  );
   const totalSavings = junta.available_capital;
   // const progress = (junta.current_month / junta.duration_months) * 100;
   const socios = junta.members.filter((m) => m.user.role === 'USER');
-  console.log(' junta.members: ', junta.members);
+
   return (
     <Card className='w-full'>
       <CardHeader>

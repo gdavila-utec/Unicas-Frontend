@@ -22,6 +22,15 @@ const formatDateForInput = (dateString: string | null | undefined): string => {
   }
 };
 
+
+interface MembersListProps {
+  members: MemberResponse[];
+  onEdit: (member: MemberResponse) => void;
+  onDelete: (memberId: string) => void;
+}
+
+
+
 const formatDateForAPI = (dateString: string): string => {
   if (!dateString) return '';
   try {
@@ -33,15 +42,7 @@ const formatDateForAPI = (dateString: string): string => {
   }
 };
 
-export default function MembersList({
-  members,
-  onEdit,
-  onDelete,
-}: {
-  members: MemberResponse[];
-  onEdit: (member: MemberResponse) => void;
-  onDelete: (memberId: string) => void;
-}) {
+export const MembersList: React.FC<MembersListProps> = ({ members, onEdit, onDelete }) => {
   return (
     <Card>
       <CardHeader>

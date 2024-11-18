@@ -20,7 +20,7 @@ interface PrestamoDetailsProps {
   id: string;
 }
 
-export function PrestamoDetails({ id }: PrestamoDetailsProps) {
+export default function PrestamoDetails({ id }: PrestamoDetailsProps) {
   const {
     prestamo,
     loanStatus,
@@ -33,7 +33,7 @@ export function PrestamoDetails({ id }: PrestamoDetailsProps) {
     formatDate,
     exportToPDF,
   } = usePrestamoDetails(id);
-
+  
   useEffect(() => {
     if (juntaId) {
       // Do something with juntaId
@@ -57,7 +57,7 @@ export function PrestamoDetails({ id }: PrestamoDetailsProps) {
   }
 
   return (
-    <div className='container mx-auto p-4 space-y-6 bg-white rounded-md'>
+    <div className='container mx-auto p-4 space-y-6 bg-white rounded-md w-full bg-red-600'>
       <div>
         <Link href={`/juntas/${juntaId}`}>
           <Button>Regresar a Junta</Button>

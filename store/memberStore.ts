@@ -91,7 +91,6 @@ export const useMemberStore = create<MemberStore>()(
 
       getJuntaMembers: () => {
         const store = get();
-        // console.log('store: ', store);
         return store.members;
       },
 

@@ -1,10 +1,11 @@
 // hooks/useResumen.ts
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/utils/api';
-import type { Member, Prestamo, Junta } from '@/types';
+import type { Member, Prestamo, Junta, MemberResponse, Accion } from '@/types';
+import useSharesByMember from './useSharesByMember';
+
 
 export const useResumen = (juntaId: string) => {
-  console.log('juntaId: ', juntaId);
   // Query for junta details
   const { data: junta, isLoading: isLoadingJunta } = useQuery<Junta>({
     queryKey: ['junta', juntaId],
@@ -14,6 +15,24 @@ export const useResumen = (juntaId: string) => {
     },
   });
 
+    const {
+      data: acciones = [],
+      isLoading: isLoadingAcciones,
+      error: accionesError,
+      refetch: refetchAcciones,
+    } = useQuery({
+      queryKey: ['acciones', juntaId],
+      queryFn: async () => {
+        const response = await api.get<Accion[]>(`acciones/junta/${juntaId}`);
+        return Array.isArray(response) ? response : [];
+      },
+      staleTime: 0,
+    });
+    
+    const { sharesByMember, isLoading: isLoadingAccionesByMember, error, totalShares, totalValue } =
+      useSharesByMember(acciones);
+ 
+
   // Query for members
   const { data: members = [], isLoading: isLoadingMembers } = useQuery<
     Member[]
@@ -21,9 +40,13 @@ export const useResumen = (juntaId: string) => {
     queryKey: ['members', juntaId],
     queryFn: async () => {
       const response = await api.get(`members/junta/${juntaId}`);
-      return response;
+      const filteredMembers = response.filter(
+        (m: MemberResponse) => m.role !== 'ADMIN'
+      );
+      return filteredMembers;
     },
   });
+
 
   // Query for active loans
   const { data: prestamos = [], isLoading: isLoadingPrestamos } = useQuery<
@@ -54,9 +77,15 @@ export const useResumen = (juntaId: string) => {
     ['PARTIAL', 'PENDING'].includes(p.status)
   );
 
-  const isLoading = isLoadingJunta || isLoadingMembers || isLoadingPrestamos;
+  const isLoading =
+    isLoadingJunta ||
+    isLoadingMembers ||
+    isLoadingPrestamos ||
+    isLoadingAcciones ||
+    isLoadingAccionesByMember;
 
   return {
+    sharesByMember,
     junta,
     members,
     activePrestamos,

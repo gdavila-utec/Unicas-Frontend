@@ -73,7 +73,6 @@ export const useAccionesSection = (
     queryKey: ['acciones', juntaId],
     queryFn: async () => {
       const response = await api.get<Accion[]>(`acciones/junta/${juntaId}`);
-      console.log('acciones response: ', response);
       return Array.isArray(response) ? response : [];
     },
     staleTime: 0,
@@ -104,18 +103,8 @@ export const useAccionesSection = (
         response.filter((member) => member.member_role === 'socio')
       );
       if (!response) return [];
-
-      // Filter and transform the data
       return response.filter((member) => member.member_role === 'socio');
-      // return response.data.filter(
-      //   (member) =>
-      //     // Add any filtering conditions you need
-      //     member.id && member.username
-      // );
     },
-    // Ensure we never return undefined
-    // select: (data) => data || [],
-    // initialData: [],
   });
   // First, let's update the Accion interface to include a proper Partial type
   interface CreateAccionDTO {

@@ -28,7 +28,6 @@ export const useMemberSection = (memberId: string, juntaId: string) => {
     useQuery<MemberDetail>({
       queryKey: ['member', memberId],
       queryFn: async () => {
-        console.log('memberId: ', memberId);
         const response = await api.get(`members/${memberId}`);
         return response;
       },

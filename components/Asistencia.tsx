@@ -45,8 +45,7 @@ export function AsistenciaSection({ juntaId }: { juntaId: string }) {
     startDate,
     endDate
   );
-  console.log("dates: ", dates);
-  console.log("members: ", members);
+
 
   if (isLoading) {
     return (
@@ -64,7 +63,7 @@ export function AsistenciaSection({ juntaId }: { juntaId: string }) {
         <TableHeader>
           <TableRow>
             <TableHead className='min-w-[200px]'>Nombre del socio</TableHead>
-            {dates.map((agendaItem) => (
+            {/* {dates.map((agendaItem) => (
               <TableHead
                 key={agendaItem.id}
                 className='min-w-[120px] text-center'
@@ -79,7 +78,14 @@ export function AsistenciaSection({ juntaId }: { juntaId: string }) {
                   </span>
                 </div>
               </TableHead>
-            ))}
+            ))} */}
+            <TableHead>18/11/2024</TableHead>
+            <TableHead>19/11/2024</TableHead>
+            <TableHead>20/11/2024</TableHead>
+            <TableHead>21/11/2024</TableHead>
+            <TableHead>22/11/2024</TableHead>
+            <TableHead>23/11/2024</TableHead>
+            <TableHead>24/11/2024</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -126,6 +132,33 @@ export function AsistenciaSection({ juntaId }: { juntaId: string }) {
                   </TableCell>
                 );
               })}
+              <TableCell>
+                <div>
+                  <div className='text-sm text-muted-foreground'>
+                    <CheckIcon className='h-5 w-5 text-green-500' />
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div>
+                  <CheckIcon className='h-5 w-5 text-green-500' />
+                </div>
+              </TableCell>
+              <TableCell>
+                <div>
+                  <CheckIcon className='h-5 w-5 text-green-500' />
+                </div>
+              </TableCell>
+              <TableCell>
+                <div>
+                  <CheckIcon className='h-5 w-5 text-green-500' />
+                </div>
+              </TableCell>
+              <TableCell>
+                <div>
+                  <CheckIcon className='h-5 w-5 text-green-500' />
+                </div>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -133,7 +166,7 @@ export function AsistenciaSection({ juntaId }: { juntaId: string }) {
 
       {/* Optional: Add attendance statistics */}
       <div className='mt-6 grid grid-cols-2 gap-4'>
-        {dates.map((agendaItem) => {
+        {dates.filter((a,i)=>i===0).map((agendaItem) => {
           const attendanceCount = members.reduce((count, member) => {
             const attended = member.attendance.find(
               (a) => a.agendaItemId === agendaItem.id

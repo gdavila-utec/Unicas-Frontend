@@ -7,9 +7,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { EditIcon, Trash2Icon } from 'lucide-react';
+import { EditIcon, Trash2Icon,  EyeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MemberResponse } from '@/types';
+import { useRouter, useParams } from 'next/navigation';
 
 const formatDateForInput = (dateString: string | null | undefined): string => {
   if (!dateString) return '';
@@ -43,6 +44,10 @@ const formatDateForAPI = (dateString: string): string => {
 };
 
 export const MembersList: React.FC<MembersListProps> = ({ members, onEdit, onDelete }) => {
+  const router = useRouter();
+  const params = useParams();
+
+  const { id  } = params
   return (
     <Card>
       <CardHeader>
@@ -75,6 +80,15 @@ export const MembersList: React.FC<MembersListProps> = ({ members, onEdit, onDel
                 <TableCell>{member?.phone}</TableCell>
                 <TableCell>{member?.status}</TableCell>
                 <TableCell className='space-x-2'>
+                  <Button
+                    onClick={() =>
+                      router.push(`/juntas/${id}/socios/${member.id}`)
+                    }
+                    variant='outline'
+                    size='sm'
+                  >
+                    <EyeIcon className='h-4 w-4' />
+                  </Button>
                   <Button
                     onClick={() => onEdit(member)}
                     variant='outline'

@@ -52,7 +52,8 @@ export default function AccionesSection({ juntaId }: AccionesSectionProps) {
     totalShares,
     totalValue,
   } = useAccionesSection(juntaId);
-
+  
+  console.log("acciones: ", acciones);
   const [calculatedValue, setCalculatedValue] = useState(shareValue);
 
   // Handle form submission

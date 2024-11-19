@@ -205,11 +205,11 @@ const Page = ({ params }: { params: { id: string } }) => {
     setNuevoPrestamoForm({ ...nuevoPrestamoForm, [name]: value });
   };
 
-  useEffect(() => {
-    fetchMembers();
-    fetchAgenda();
-    fetchPrestamos();
-  }, []);
+  // useEffect(() => {
+  //   fetchMembers();
+  //   fetchAgenda();
+  //   fetchPrestamos();
+  // }, []);
 
   return (
     <div className='p-6'>

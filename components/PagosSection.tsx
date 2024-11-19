@@ -122,15 +122,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
 
   return (
     <div className='space-y-8'>
-      <div>
-        <Button
-          variant='outline'
-          className='mb-6'
-        >
-          Volver a la lista de juntas
-        </Button>
-        <h1 className='text-2xl font-bold mb-6'>Junta Vecinal 2023</h1>
-      </div>
+ 
 
       <div className='bg-white p-6 rounded-lg shadow'>
         <h2 className='text-xl font-bold mb-6'>Registrar Pago de Préstamo</h2>

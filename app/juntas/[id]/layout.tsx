@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useJuntaDashboard } from '@/hooks/useJuntaDashboard';
 import { MenuItems } from '@/components/MenuItems';
+import { Settings } from 'lucide-react';
 
 export default function JuntaLayout({
   children,
@@ -54,15 +55,26 @@ export default function JuntaLayout({
                 </div>
               )}
             </CardTitle>
-            <Link href='/'>
+            <div className='flex gap-3'>
               <Button
                 variant='secondary'
                 size='sm'
                 className='hidden sm:flex items-center gap-2 rounded bg-gray-800 text-primary-foreground'
+                onClick={() => router.push(`/juntas/${params.id}/settings`)}
               >
-                Cerrar sesion
+                <Settings />
+                Ajustes
               </Button>
-            </Link>
+              <Link href='/'>
+                <Button
+                  variant='secondary'
+                  size='sm'
+                  className='hidden sm:flex items-center gap-2 rounded bg-gray-800 text-primary-foreground'
+                >
+                  Cerrar sesion
+                </Button>
+              </Link>
+            </div>
           </div>
         </CardHeader>
         <CardContent className='pt-6 flex'>
@@ -74,9 +86,7 @@ export default function JuntaLayout({
                 variant='ghost'
                 className={item.color}
                 onClick={() =>
-                  router.push(
-                    `/juntas/${params.id}/${item.route}`
-                  )
+                  router.push(`/juntas/${params.id}/${item.route}`)
                 }
               >
                 <item.icon className='mr-2 h-4 w-4' />

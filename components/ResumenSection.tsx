@@ -69,7 +69,7 @@ const Resumen: React.FC<ResumenProps> = ({ juntaId }) => {
             <Button
               variant='default'
               className='w-full bg-periwinkleBlue text-white'
-              onClick={() => router.push(`/juntas/${juntaId}/agenda`)}
+              onClick={() => router.push(`/juntas/${juntaId}/multistep`)}
             >
               Iniciar Asamblea
             </Button>

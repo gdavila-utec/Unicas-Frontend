@@ -1,11 +1,11 @@
 'use client';
 
-// import { useParams } from 'next/navigation';
-import MultistepAsamblea from '@/components/MultistepAsamblea';
+import { useParams } from 'next/navigation';
+import {AssemblySteps} from '@/components/Steps';
 
 export default function ResumenPage() {
-  // const params = useParams<{ id: string }>();
-  // const juntaId = params.id as string;
+  const params = useParams<{ id: string }>();
+  const juntaId = params.id as string;
 
-  return <MultistepAsamblea  />;
+  return <AssemblySteps juntaId={juntaId} />;
 }

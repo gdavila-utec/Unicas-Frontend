@@ -1,11 +1,11 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import AsambleaSection from '@/components/AssemblySection';
+import { AgendaInfo } from '@/components/Agenda';
 
 export default function ResumenPage() {
   const params = useParams<{ id: string }>();
   const juntaId = params.id as string;
 
-  return <AsambleaSection juntaId={juntaId} />;
+  return <AgendaInfo  />;
 }

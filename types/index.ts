@@ -1,4 +1,27 @@
-// User and Authentication Types
+import { FC } from 'react';
+import { LucideIcon } from 'lucide-react';
+
+export interface MenuItem {
+  label: string;
+  route: string;
+  icon: LucideIcon;
+  color: string;
+}
+
+export interface BaseStepProps {
+  juntaId: string;
+}
+
+export interface StepComponentProps {
+  juntaId: string;
+  menuItems: MenuItem[];
+}
+
+export interface MenuStepProps extends BaseStepProps {
+  menuItems: MenuItem[];
+}
+
+
 export interface User {
   id: string;
   username: string;

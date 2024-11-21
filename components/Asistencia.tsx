@@ -17,40 +17,37 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckIcon } from 'lucide-react';
-import { useAsistencia } from '@/hooks/useAsistencia';
+import { useAttendance } from '@/hooks/useAsistencia';
 
-interface AttendanceResponse {
-  members: Array<{
-    id: string;
-    name: string | null;
-    role: string | null;
-  }>;
-  attendance: Array<{
-    userId: string;
-    agendaItemId: string;
-    asistio: boolean;
-  }>;
-}
-
-interface AsistenciaSectionProps {
-  juntaId: string;
-}
-
+import { useEffect, useState } from 'react'
+// components/AsistenciaSection.tsx
 export function AsistenciaSection({ juntaId }: { juntaId: string }) {
-  const startDate = format(startOfWeek(new Date()), 'yyyy-MM-dd');
-  const endDate = format(endOfWeek(new Date()), 'yyyy-MM-dd');
-
-  const { dates, members, isLoading, markAttendance } = useAsistencia(
-    juntaId,
-    startDate,
-    endDate
-  );
-
+  const {
+    agendaItem,
+    members,
+    isLoading,
+    markAttendance,
+    createWeeklyAgenda,
+    isCreatingAgenda,
+  } = useAttendance(juntaId);
 
   if (isLoading) {
+    return <div className='animate-spin' />;
+  }
+
+  if (!agendaItem) {
     return (
-      <div className='flex justify-center items-center p-8'>
-        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900' />
+      <div className='flex flex-col items-center justify-center p-8 space-y-4'>
+        <p className='text-muted-foreground'>No hay agenda para esta semana</p>
+        <Button
+          onClick={createWeeklyAgenda}
+          disabled={isCreatingAgenda}
+        >
+          {isCreatingAgenda ? (
+            <div className='animate-spin mr-2 h-4 w-4 border-b-2 border-white rounded-full' />
+          ) : null}
+          Generar Agenda
+        </Button>
       </div>
     );
   }
@@ -58,71 +55,51 @@ export function AsistenciaSection({ juntaId }: { juntaId: string }) {
   return (
     <div className='space-y-4'>
       <h2 className='text-xl font-bold'>Lista de asistencia</h2>
-
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className='min-w-[200px]'>Nombre del socio</TableHead>
-            {/* {dates.map((agendaItem) => (
+            <TableHead>Nombre del socio</TableHead>
+            {agendaItem.daySchedules.map((schedule) => (
               <TableHead
-                key={agendaItem.id}
-                className='min-w-[120px] text-center'
+                key={schedule.id}
+                className='text-center'
               >
-                <div className='flex flex-col gap-1'>
-                  <span>{format(new Date(agendaItem.date), 'dd/MM/yyyy')}</span>
-                  <span className='text-xs font-medium text-muted-foreground'>
-                    {agendaItem.title}
-                  </span>
-                  <span className='text-xs text-muted-foreground'>
-                    {agendaItem.description}
-                  </span>
-                </div>
+                {format(new Date(schedule.startTime), 'dd/MM/yyyy')}
               </TableHead>
-            ))} */}
-            <TableHead>18/11/2024</TableHead>
-            <TableHead>19/11/2024</TableHead>
-            <TableHead>20/11/2024</TableHead>
-            <TableHead>21/11/2024</TableHead>
-            <TableHead>22/11/2024</TableHead>
-            <TableHead>23/11/2024</TableHead>
-            <TableHead>24/11/2024</TableHead>
+            ))}
           </TableRow>
         </TableHeader>
         <TableBody>
           {members.map((member) => (
             <TableRow key={member.id}>
               <TableCell>
-                <div>
-                  <span className='font-medium'>{member.name}</span>
-                  <div className='text-sm text-muted-foreground'>
-                    {member.role}
-                  </div>
+                <span>{member.name}</span>
+                <div className='text-sm text-muted-foreground'>
+                  {member.role}
                 </div>
               </TableCell>
-
-              {dates.map((agendaItem) => {
-                const attendanceRecord = member.attendance.find(
-                  (a) => a.agendaItemId === agendaItem.id
+              {agendaItem.daySchedules.map((schedule) => {
+                const isAttended = schedule.attendance.some(
+                  (a) => a.userId === member.id && a.attended
                 );
 
                 return (
                   <TableCell
-                    key={`${member.id}-${agendaItem.id}`}
+                    key={schedule.id}
                     className='text-center'
                   >
-                    {attendanceRecord?.attended ? (
-                      <div className='flex justify-center'>
-                        <CheckIcon className='h-5 w-5 text-green-500' />
-                      </div>
+                    {isAttended ? (
+                      <CheckIcon className='h-5 w-5 text-green-500 mx-auto' />
                     ) : (
                       <Button
                         variant='ghost'
                         size='sm'
                         onClick={() =>
                           markAttendance({
-                            memberId: member.id,
+                            userId: member.id,
                             agendaItemId: agendaItem.id,
-                            asistio: true,
+                            dayScheduleId: schedule.id,
+                            attended: true,
                           })
                         }
                       >
@@ -132,65 +109,10 @@ export function AsistenciaSection({ juntaId }: { juntaId: string }) {
                   </TableCell>
                 );
               })}
-              <TableCell>
-                <div>
-                  <div className='text-sm text-muted-foreground'>
-                    <CheckIcon className='h-5 w-5 text-green-500' />
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div>
-                  <CheckIcon className='h-5 w-5 text-green-500' />
-                </div>
-              </TableCell>
-              <TableCell>
-                <div>
-                  <CheckIcon className='h-5 w-5 text-green-500' />
-                </div>
-              </TableCell>
-              <TableCell>
-                <div>
-                  <CheckIcon className='h-5 w-5 text-green-500' />
-                </div>
-              </TableCell>
-              <TableCell>
-                <div>
-                  <CheckIcon className='h-5 w-5 text-green-500' />
-                </div>
-              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-
-      {/* Optional: Add attendance statistics */}
-      <div className='mt-6 grid grid-cols-2 gap-4'>
-        {dates.filter((a,i)=>i===0).map((agendaItem) => {
-          const attendanceCount = members.reduce((count, member) => {
-            const attended = member.attendance.find(
-              (a) => a.agendaItemId === agendaItem.id
-            )?.attended;
-            return attended ? count + 1 : count;
-          }, 0);
-
-          return (
-            <Card key={agendaItem.id}>
-              <CardHeader>
-                <CardTitle className='text-sm'>{agendaItem.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='text-2xl font-bold'>
-                  {((attendanceCount / members.length) * 100).toFixed(0)}%
-                </div>
-                <p className='text-xs text-muted-foreground'>
-                  {attendanceCount} de {members.length} asistentes
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
     </div>
   );
 }

@@ -1,81 +1,110 @@
 // hooks/useAsistencia.ts
 // hooks/useAsistencia.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, QueryClient } from '@tanstack/react-query';
 import { api } from '@/utils/api';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
-import { MemberResponse }  from '../types'
+import { format, startOfWeek, endOfWeek } from 'date-fns';
+import { MemberResponse } from '../types'
 
-// types for frontend
-interface AgendaItem {
-  id: string;
+interface CreateAgendaParams {
   title: string;
-  date: string;
   description: string;
-}
-
-interface AttendanceRecord {
   date: string;
-  agendaItemId: string;
-  attended: boolean;
+  juntaId: string;
 }
 
-interface MemberWithAttendance {
+interface DaySchedule {
   id: string;
-  name: string;
-  role: string;
-  attendance: AttendanceRecord[];
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  attendance: Array<{
+    userId: string;
+    attended: boolean;
+  }>;
 }
 
 interface AttendanceResponse {
-  dates: AgendaItem[]; // Updated to include full agenda item info
-  members: MemberWithAttendance[];
+  agendaItems: Array<{
+    id: string;
+    title: string;
+    description: string;
+    weekStartDate: string;
+    weekEndDate: string;
+    daySchedules: DaySchedule[];
+  }>;
+  members: Array<{
+    id: string;
+    name: string;
+    role: string;
+  }>;
 }
 
-// Updated hook
-export const useAsistencia = (juntaId: string, startDate: string, endDate: string) => {
-  const queryClient = useQueryClient();
+export const useAttendance = (juntaId: string) => {
+  // const startDate = format(startOfWeek(new Date()), 'yyyy-MM-dd');
+  // const endDate = format(endOfWeek(new Date()), 'yyyy-MM-dd');
+    const startDate = '2024-11-25'
+    const endDate = '2024-12-01'
+  const queryClient = new QueryClient()
 
-  const {
-    data,
-    isLoading,
-  } = useQuery<AttendanceResponse>({
+  const { data, isLoading } = useQuery<AttendanceResponse>({
     queryKey: ['asistencias', { juntaId, startDate, endDate }],
     queryFn: async () => {
       const response = await api.get(
         `attendance/list?juntaId=${juntaId}&startDate=${startDate}&endDate=${endDate}`
       );
+      console.log('asistencias response: ', response);
       return response;
+    },
+    staleTime: 0,
+  });
+
+  const createAgendaMutation = useMutation({
+    mutationFn: (params: CreateAgendaParams) => {
+      return api.post('agenda', params);
+    },
+    onSuccess: () => {
+      // queryClient.invalidateQueries(['agenda']);
     },
   });
 
-  const markAttendanceMutation = useMutation({
-    mutationFn: async ({
-      memberId,
-      agendaItemId,
-      asistio
-    }: {
-      memberId: string;
+  const createWeeklyAgenda = () => {
+    createAgendaMutation.mutate({
+      title: 'Weekly Meeting',
+      description: 'Regular team sync',
+      date: startDate,
+      juntaId,
+    });
+  };
+
+  const markAttendanceMutation =  useMutation({
+    mutationFn: (variables: {
+      userId: string;
       agendaItemId: string;
-      asistio: boolean;
+      dayScheduleId: string;
+      attended: boolean;
     }) => {
-      return api.post('attendance/mark', {
-        memberId,
-        agendaItemId,
-        asistio
-      });
+      const response =  api.post('attendance/mark', variables);
+      console.log('markAttendanceMutation response: ', response);
+      return response
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['asistencias', { juntaId, startDate, endDate }]
-      });
-    }
+      queryClient.invalidateQueries({ queryKey: ['asistencias'] });
+    },
   });
 
   return {
-    dates: data?.dates || [],
-    members: data?.members || [],
-    isLoading,
-    markAttendance: markAttendanceMutation.mutateAsync
+    agendaItem: data?.agendaItems[0],
+    members: data?.members.filter((m) => m.role === 'socio') || [],
+    isLoading: isLoading || markAttendanceMutation.isPending,
+    markAttendance: (variables: {
+      userId: string;
+      agendaItemId: string;
+      dayScheduleId: string;
+      attended: boolean;
+    }) => markAttendanceMutation.mutate(variables),
+    startDate,
+    endDate,
+    createWeeklyAgenda,
+    isCreatingAgenda: createAgendaMutation.isPending,
   };
 };
-

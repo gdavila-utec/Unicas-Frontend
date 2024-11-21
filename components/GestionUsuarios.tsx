@@ -112,9 +112,11 @@ export default function GestionUsuarios() {
                     <SelectValue placeholder='Seleccionar rol' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='admin'>Admin</SelectItem>
-                    <SelectItem value='user'>Usuario</SelectItem>
-                    <SelectItem value='member'>Miembro</SelectItem>
+                    <SelectItem value='admin'>ADMIN</SelectItem>
+                    <SelectItem value='user'>USER</SelectItem>
+                    <SelectItem value='member'>MIEMBRO</SelectItem>
+                    <SelectItem value='member'>FACILITADOR</SelectItem>
+                    <SelectItem value='member'>PRESIDENTE</SelectItem>
                   </SelectContent>
                 </Select>
               </TableCell>

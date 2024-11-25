@@ -13,7 +13,7 @@ const defaultFormValues: NewMemberForm = {
   document_number: '',
   role: 'socio',
   productive_activity: '',
-  birth_date: '',
+  birth_date: new Date().toISOString().split('T')[0],
   phone: '',
   address: '',
   join_date: new Date().toISOString().split('T')[0],
@@ -97,11 +97,15 @@ export const useMembersSection = (juntaId: string): UseMembersSectionResult => {
   // Mutation for creating members
   const createMemberMutation = useMutation({
     mutationFn: async (formData: NewMemberForm) => {
+      console.log("formData: ", formData);
       const formattedData = {
         ...formData,
-        birth_date: formatDateForAPI(formData.birth_date),
+        birth_date: formatDateForAPI(
+          formData.birth_date || new Date().toISOString().split('T')[0]
+        ),
         join_date: formatDateForAPI(formData.join_date),
       };
+      console.log('Formatted data being sent:', formattedData); 
       return api.post(
         `members/${juntaId}/add/${formattedData.document_number}`,
         formattedData

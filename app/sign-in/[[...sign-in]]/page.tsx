@@ -71,6 +71,7 @@ export default function SignInPage() {
       });
 
       const data = response.data;
+      console.log("data: ", data);
       console.log('Login successful:', {
         role: data.user.role,
         id: data.user.id,
@@ -105,8 +106,8 @@ export default function SignInPage() {
         case 'facilitador':
           router.push('/');
           break;
-        case 'member':
-          router.push('/');
+        case 'user':
+          router.push('/member');
           break;
         default:
           router.push('/');

@@ -12,7 +12,6 @@ export function useAuth(requiredRole?: string) {
     // Check if we're in the browser
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('auth-storage');
-      console.log('Stored auth:', stored);
 
       if (!stored) {
         console.log('No stored auth found, redirecting to login');
@@ -23,7 +22,6 @@ export function useAuth(requiredRole?: string) {
 
       try {
         const { state } = JSON.parse(stored);
-        console.log('Parsed stored state:', state);
 
         if (!state.isAuthenticated) {
           console.log('Not authenticated, redirecting to sign-in');

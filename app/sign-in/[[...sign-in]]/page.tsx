@@ -14,7 +14,7 @@ import { Loader2 } from 'lucide-react';
 import Cookies from 'js-cookie';
 import axiosInstance from '../../../utils/axios';
 import { Eye, EyeOff } from 'lucide-react';
-
+import logo from '@/public/logo.png';
 
 
 interface FormData {
@@ -115,12 +115,11 @@ export default function SignInPage() {
     <div className='flex min-h-screen items-center justify-center bg-gray-50'>
       <Card className='w-full max-w-md flex flex-col items-center bg-[#1763b8] p-8 gap-8'>
         <Image
-          src='/logo.png'
+          src={logo}
           alt='logo'
           width={200}
           height={20}
         />
-
 
         <CardContent>
           <form
@@ -132,7 +131,7 @@ export default function SignInPage() {
                 {error}
               </div>
             )}
-            <div className='space-y-2 bg-white rounded-md' >
+            <div className='space-y-2 bg-white rounded-md'>
               <Input
                 id='phone_number'
                 type='tel'
@@ -148,7 +147,7 @@ export default function SignInPage() {
 
             <div className='space-y-2'>
               <div className='space-y-2'>
-                <div className='relative bg-white rounded-md' >
+                <div className='relative bg-white rounded-md'>
                   <Input
                     id='password'
                     type={showPassword ? 'text' : 'password'}

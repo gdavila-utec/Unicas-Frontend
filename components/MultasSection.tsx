@@ -1,7 +1,8 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+
+import EnhancedInputAmount from '@/components/ui/enhanced-input-amount';
 import {
   Select,
   SelectContent,
@@ -35,6 +36,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { useBoardConfig } from '@/store/configValues';
 
 interface MultasSectionProps {
   juntaId: string;
@@ -43,6 +45,9 @@ interface MultasSectionProps {
 export const MultasSection: React.FC<MultasSectionProps> = ({ juntaId }) => {
   const { form, members, multas, isLoading, onSubmit, handleDeleteMulta } =
     useMultas(juntaId);
+  const { absenceFee, latePaymentFee } = useBoardConfig();
+
+  
 
   if (isLoading) {
     return (
@@ -105,7 +110,18 @@ export const MultasSection: React.FC<MultasSectionProps> = ({ juntaId }) => {
                     <FormItem>
                       <FormLabel>Motivo</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          // Set the amount based on the selected reason
+                          if (value === 'INASISTENCIA') {
+                            form.setValue('amount', absenceFee);
+                          } else if (value === 'TARDANZA') {
+                            form.setValue('amount', latePaymentFee);
+                          } else {
+                            // For 'OTROS', you might want to clear the amount or keep it unchanged
+                            form.setValue('amount', 0);
+                          }
+                        }}
                         value={field.value}
                       >
                         <FormControl>
@@ -125,7 +141,6 @@ export const MultasSection: React.FC<MultasSectionProps> = ({ juntaId }) => {
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name='date'
@@ -172,11 +187,14 @@ export const MultasSection: React.FC<MultasSectionProps> = ({ juntaId }) => {
                     <FormItem>
                       <FormLabel>Monto</FormLabel>
                       <FormControl>
-                        <Input
+                        <EnhancedInputAmount
                           type='number'
                           {...field}
                           onChange={(e) =>
                             field.onChange(Number(e.target.value))
+                          }
+                          disabled={
+                            form.getValues('reason') === 'OTROS' ? false : true
                           }
                         />
                       </FormControl>

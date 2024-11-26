@@ -1,4 +1,3 @@
-// MembersSection.tsx
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,10 +12,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMembersSection } from '@/hooks/useMembersSection';
 import { MembersList } from './MemberList';
 import MemberForm from './MemberForm';
+import {  NewMemberForm } from '../types';
 
 interface MembersSectionProps {
   juntaId: string;
 }
+
+// interface NewMemberForm extends FormData {
+//   id: string;
+//   password: string;
+//   name: string;
+//   email: string;
+// }
 
 const MembersSection: React.FC<MembersSectionProps> = ({ juntaId }) => {
   const { isAuthenticated } = useAuth();
@@ -31,6 +38,7 @@ const MembersSection: React.FC<MembersSectionProps> = ({ juntaId }) => {
     setNewMember,
     resetForm,
     formatDateForInput,
+    updateMemberMutation, // Make sure this is exposed from useMembersSection
   } = useMembersSection(juntaId);
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -47,16 +55,32 @@ const MembersSection: React.FC<MembersSectionProps> = ({ juntaId }) => {
     );
   }
 
-  const handleFormSubmit = async (formData: any) => {
-    setNewMember(formData);
-    // Create a synthetic event since we're not getting a real form event
-    const syntheticEvent = {
-      preventDefault: () => {},
-      // Add any other event properties that your handleSubmit function might need
-    } as React.FormEvent;
+  const handleFormSubmit = async (formData: NewMemberForm) => {
+    try {
+      if (isEditing) {
+        // For updates, call updateMemberMutation directly
+        await updateMemberMutation.mutateAsync({
+          memberId: formData.id, // Use the ID from the form data
+          data: formData,
+        });
+      } else {
+        // For creating new members, use the existing flow
+        const syntheticEvent = {
+          preventDefault: () => {},
+          target: {
+            elements: {
+              ...formData,
+            },
+          },
+        } as unknown as React.FormEvent;
 
-    await handleSubmit(syntheticEvent);
-    setIsModalOpen(false);
+        setNewMember(formData);
+        await handleSubmit(syntheticEvent);
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+    }
   };
 
   const handleCancel = () => {
@@ -87,7 +111,7 @@ const MembersSection: React.FC<MembersSectionProps> = ({ juntaId }) => {
               </DialogTitle>
             </DialogHeader>
             <MemberForm
-              key={isModalOpen ? 'open' : 'closed'}
+              key={`form-${isEditing ? 'edit' : 'create'}-${Date.now()}`}
               initialData={newMember}
               isLoading={isLoading}
               isEditing={isEditing}

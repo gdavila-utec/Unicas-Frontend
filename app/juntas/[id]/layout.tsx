@@ -71,7 +71,7 @@ export default function JuntaLayout({
                   size='sm'
                   className='hidden sm:flex items-center gap-2 rounded bg-gray-800 text-primary-foreground'
                 >
-                  Cerrar sesion
+                  Regresar 
                 </Button>
               </Link>
             </div>

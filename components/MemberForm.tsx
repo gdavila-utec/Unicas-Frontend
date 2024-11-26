@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,40 +10,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MemberRole, DocumentType, Gender } from '@/types';
-
-interface Beneficiary {
-  full_name: string;
-  document_type: DocumentType;
-  document_number: string;
-  phone: string;
-  address: string;
-}
-
-interface FormData {
-  full_name: string;
-  document_type: DocumentType;
-  document_number: string;
-  role: MemberRole;
-  productive_activity: string;
-  birth_date: string;
-  phone: string;
-  address: string;
-  join_date: string;
-  gender: Gender;
-  additional_info: string;
-  beneficiary: Beneficiary;
-}
+import {
+  MemberRole,
+  DocumentType,
+  Gender,
+  NewMemberForm,
+} from '@/types';
 
 interface MemberFormProps {
-  initialData: FormData & { password: string };
+  initialData: NewMemberForm;
   isLoading: boolean;
   isEditing: boolean;
-  onSubmit: (formData: FormData & { password: string }) => void;
+  onSubmit: (formData: NewMemberForm) => Promise<void>;
   onCancel: () => void;
   formatDateForInput: (date: string) => string;
 }
-
 const MemberForm = memo(
   ({
     initialData,
@@ -54,9 +35,14 @@ const MemberForm = memo(
     formatDateForInput,
   }: MemberFormProps) => {
     const [password, setPassword] = React.useState(initialData.password);
-    const [formData, setFormData] = React.useState<FormData>(() => {
-      const { password: _, ...restData } = initialData;
-      return restData;
+    const [showPassword, setShowPassword] = React.useState(false);
+    // Change the type here to NewMemberForm instead of MemberFormData
+    const [formData, setFormData] = React.useState<NewMemberForm>(() => {
+      // Include password in the initial state
+      return {
+        ...initialData,
+        password: initialData.password, // Make sure password is included
+      };
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -66,17 +52,32 @@ const MemberForm = memo(
         return;
       }
 
-      onSubmit({
+      const completeFormData: NewMemberForm = {
         ...formData,
         password: finalPassword,
-      });
+        id: initialData.id || '',
+        document_type: formData.document_type || 'DNI',
+        role: formData.role || 'socio',
+        gender: formData.gender || 'Masculino',
+        birth_date:
+          formData.birth_date || new Date().toISOString().split('T')[0],
+        join_date: formData.join_date || new Date().toISOString().split('T')[0],
+        beneficiary: {
+          ...formData.beneficiary,
+          document_type: formData.beneficiary.document_type || 'DNI',
+        },
+      };
+
+      onSubmit(completeFormData);
     };
 
-    React.useEffect(() => {
-      const { password: currentPassword, ...restData } = initialData;
-      setFormData(restData);
-      setPassword(currentPassword);
-    }, [initialData]);
+    useEffect(() => {
+      // const { password: currentPassword, ...restData } = initialData;
+      setFormData({
+        ...initialData,
+        password: password || initialData.password, // Make sure password is included
+      });
+    }, [initialData, password]);
 
     return (
       <form
@@ -235,18 +236,65 @@ const MemberForm = memo(
                   ? 'Nueva Contraseña (dejar en blanco para mantener)'
                   : 'Contraseña'}
               </Label>
-              <Input
-                id='password'
-                type='password'
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={
-                  isEditing
-                    ? 'Dejar en blanco para mantener la contraseña actual'
-                    : ''
-                }
-                required={!isEditing}
-              />
+              <div className='relative'>
+                <Input
+                  id='password'
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={
+                    isEditing
+                      ? 'Dejar en blanco para mantener la contraseña actual'
+                      : ''
+                  }
+                  required={!isEditing}
+                />
+                <Button
+                  type='button'
+                  variant='ghost'
+                  size='sm'
+                  className='absolute right-0 top-0 h-full px-3 hover:bg-transparent'
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <svg
+                      xmlns='http://www.w3.org/2000/svg'
+                      viewBox='0 0 24 24'
+                      fill='none'
+                      stroke='currentColor'
+                      className='h-4 w-4'
+                    >
+                      <path d='M9.88 9.88a3 3 0 1 0 4.24 4.24' />
+                      <path d='M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68' />
+                      <path d='M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61' />
+                      <line
+                        x1='2'
+                        x2='22'
+                        y1='2'
+                        y2='22'
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      xmlns='http://www.w3.org/2000/svg'
+                      viewBox='0 0 24 24'
+                      fill='none'
+                      stroke='currentColor'
+                      className='h-4 w-4'
+                    >
+                      <path d='M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z' />
+                      <circle
+                        cx='12'
+                        cy='12'
+                        r='3'
+                      />
+                    </svg>
+                  )}
+                  <span className='sr-only'>
+                    {showPassword ? 'Hide password' : 'Show password'}
+                  </span>
+                </Button>
+              </div>
             </div>
           </div>
           <div className='mt-4'>

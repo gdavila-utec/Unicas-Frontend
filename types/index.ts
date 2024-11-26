@@ -1,6 +1,56 @@
 import { FC } from 'react';
 import { LucideIcon } from 'lucide-react';
 
+
+export interface Beneficiary {
+  full_name: string;
+  document_type: DocumentType;
+  document_number: string;
+  phone: string;
+  address: string;
+}
+
+export interface FormData {
+  full_name: string;
+  document_type: DocumentType;
+  document_number: string;
+  role: MemberRole;
+  productive_activity: string;
+  birth_date: string;
+  phone: string;
+  address: string;
+  join_date: string;
+  gender: Gender;
+  additional_info: string;
+  beneficiary: {
+    full_name: string;
+    document_type: DocumentType;
+    document_number: string;
+    phone: string;
+    address: string;
+  };
+}
+
+export type NewMemberForm = FormData & {
+  id: string;
+  password: string;
+};
+
+// export interface FormData {
+//   full_name: string;
+//   document_type: DocumentType;
+//   document_number: string;
+//   role: MemberRole;
+//   productive_activity: string;
+//   birth_date: string;
+//   phone: string;
+//   address: string;
+//   join_date: string;
+//   gender: Gender;
+//   additional_info: string;
+//   beneficiary: Beneficiary;
+// }
+
 export interface MenuItem {
   label: string;
   route: string;
@@ -221,37 +271,37 @@ export interface AccionFormValues {
 }
 
 // Form Types
-export interface NewMemberForm {
-  id: string;
-  full_name: string;
-  document_type: DocumentType;
-  document_number: string;
-  role: MemberRole;
-  productive_activity: string;
-  birth_date: string;
-  phone: string;
-  address: string;
-  join_date: string;
-  gender: Gender;
-  password: string;
-  additional_info: string;
-  beneficiary: {
-    full_name: string;
-    document_type: DocumentType;
-    document_number: string;
-    phone: string;
-    address: string;
-  };
-}
+// export interface NewMemberForm {
+//   id: string;
+//   full_name: string;
+//   document_type: DocumentType;
+//   document_number: string;
+//   role: MemberRole;
+//   productive_activity: string;
+//   birth_date: string;
+//   phone: string;
+//   address: string;
+//   join_date: string;
+//   gender: Gender;
+//   password: string;
+//   additional_info: string;
+//   beneficiary: {
+//     full_name: string;
+//     document_type: DocumentType;
+//     document_number: string;
+//     phone: string;
+//     address: string;
+//   };
+// }
 
 // Enums and Constants
 export type DocumentType = 'DNI' | 'CE';
 
-export type Gender = 'Masculino' | 'Femenino' | 'Otro';
+export type Gender = 'Masculino' | 'Femenino';
 
 export type Role = 'ADMIN' | 'USER';
 
-export type MemberRole = 'socio' | 'presidente' | 'tesorero' | 'secretario';
+export type MemberRole = 'socio' | 'presidente' | 'facilitador';
 
 export type UserStatus = 'Activo' | 'Inactivo' | 'Pendiente';
 

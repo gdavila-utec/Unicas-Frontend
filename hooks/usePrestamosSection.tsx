@@ -7,7 +7,7 @@ import { useBoardConfig } from '@/store/configValues';
 import type {
   LoanFormData,
   CreateLoanPayload,
-  Member,
+
   MemberResponse,
   MemberInfo,
   Prestamo,
@@ -17,7 +17,7 @@ import type {
 export const usePrestamos = (juntaId: string) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { monthlyInterestRate, shareValue } = useBoardConfig();
+  const { monthlyInterestRate } = useBoardConfig();
 
   const initialFormData: LoanFormData = {
     memberId: '',
@@ -146,10 +146,10 @@ export const usePrestamos = (juntaId: string) => {
       });
       setFormData(initialFormData);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Error',
-        description: error?.message || 'Error al registrar préstamo',
+        description: (error as Error)?.message || 'Error al registrar préstamo',
         variant: 'destructive',
       });
     },
@@ -165,10 +165,10 @@ export const usePrestamos = (juntaId: string) => {
         description: 'Préstamo eliminado correctamente',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Error',
-        description: error?.message || 'Error al eliminar préstamo',
+        description: (error as Error)?.message || 'Error al eliminar préstamo',
         variant: 'destructive',
       });
     },

@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { api } from '@/utils/api';
 import type { MemberResponse as Member, Multa, ApiResponse } from '@/types';
+import { useBoardConfig } from '@/store/configValues';
 
 const formSchema = z.object({
   memberId: z.string().min(1, { message: 'Miembro requerido' }),
@@ -29,13 +30,14 @@ interface UseMultasResult {
 export const useMultas = (juntaId: string): UseMultasResult => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+    const {  latePaymentFee } = useBoardConfig();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       memberId: '',
       reason: 'TARDANZA',
-      amount: 5,
+      amount: latePaymentFee,
       comments: '',
       date: new Date(),
     },

@@ -38,7 +38,7 @@ export function JuntaCard({
         <div className='space-y-4'>
           <div className='flex justify-between items-center'>
             <span className='flex items-center'>
-              Capital Social: S/.{junta.available_capital}
+              Capital Social: S/.{junta.available_capital.toFixed(2)}
             </span>
             <span className='flex items-center'>
               <UserIcon className='mr-2 h-4 w-4' />

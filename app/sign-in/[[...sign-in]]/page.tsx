@@ -2,21 +2,20 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import useAuthStore from '../../../store/useAuthStore';
+import Image from 'next/image';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from '../../../components/ui/card';
 import { Loader2 } from 'lucide-react';
 import Cookies from 'js-cookie';
 import axiosInstance from '../../../utils/axios';
+import { Eye, EyeOff } from 'lucide-react';
 
-type LoginMethod = 'email' | 'phone';
+
 
 interface FormData {
   email?: string;
@@ -38,7 +37,7 @@ interface LoginResponse {
 export default function SignInPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
-  const [loginMethod, setLoginMethod] = useState<LoginMethod>('phone');
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     phone_number: '',
     password: '',
@@ -52,21 +51,8 @@ export default function SignInPage() {
     setError('');
 
     try {
-      // Format phone number if needed
-      const formattedData = {
-        ...formData,
-        phone_number:
-          loginMethod === 'phone' && formData.phone_number
-            ? formData.phone_number.startsWith('+51')
-              ? formData.phone_number
-              : `+51${formData.phone_number}`
-            : formData.phone_number,
-      };
-
       const response = await axiosInstance.post<LoginResponse>('/auth/login', {
-        ...(loginMethod === 'email'
-          ? { email: formData.email }
-          : { phone: formattedData.phone_number }),
+        phone: formData.phone_number,
         password: formData.password,
       });
 
@@ -100,6 +86,7 @@ export default function SignInPage() {
       // Force a router refresh to update middleware state
       router.refresh();
 
+      console.log("data.user.role: ", data.user.role);
       // Redirect based on role
       switch (data.user.role.toLowerCase()) {
         case 'admin':
@@ -107,10 +94,10 @@ export default function SignInPage() {
           router.push('/');
           break;
         case 'user':
-          router.push('/member');
+          router.push(`/member?socioId=${data.user.id}`); 
           break;
         default:
-          router.push('/');
+          router.push('/404');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -126,33 +113,16 @@ export default function SignInPage() {
 
   return (
     <div className='flex min-h-screen items-center justify-center bg-gray-50'>
-      <Card className='w-full max-w-md'>
-        <CardHeader className='space-y-1'>
-          <CardTitle className='text-2xl text-center font-bold'>
-            Iniciar Sesión
-          </CardTitle>
-        </CardHeader>
+      <Card className='w-full max-w-md flex flex-col items-center bg-[#1763b8] p-8 gap-8'>
+        <Image
+          src='/logo.png'
+          alt='logo'
+          width={200}
+          height={20}
+        />
+
 
         <CardContent>
-          {/* <div className='flex justify-center space-x-4 mb-6'>
-            <Button
-              type='button'
-              variant={loginMethod === 'email' ? 'default' : 'outline'}
-              onClick={() => setLoginMethod('email')}
-              disabled={loading}
-            >
-              Email
-            </Button>
-            <Button
-              type='button'
-              variant={loginMethod === 'phone' ? 'default' : 'outline'}
-              onClick={() => setLoginMethod('phone')}
-              disabled={loading}
-            >
-              Teléfono
-            </Button>
-          </div> */}
-
           <form
             className='space-y-4'
             onSubmit={handleSubmit}
@@ -162,56 +132,61 @@ export default function SignInPage() {
                 {error}
               </div>
             )}
-
-            {loginMethod === 'email' ? (
-              <div className='space-y-2'>
-                <Input
-                  id='email'
-                  type='email'
-                  placeholder='Email'
-                  required
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  disabled={loading}
-                />
-              </div>
-            ) : (
-              <div className='space-y-2'>
-                <Input
-                  id='phone_number'
-                  type='tel'
-                  placeholder='Teléfono (ej: 999999999)'
-                  required
-                  value={formData.phone_number}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      phone_number: e.target.value.replace(/\D/g, ''),
-                    })
-                  }
-                  disabled={loading}
-                />
-                <p className='text-sm text-gray-500'>
-                  Ingresa solo números, se agregará el prefijo +51
-                  automáticamente
-                </p>
-              </div>
-            )}
-
-            <div className='space-y-2'>
+            <div className='space-y-2 bg-white rounded-md' >
               <Input
-                id='password'
-                type='password'
-                placeholder='Contraseña'
+                id='phone_number'
+                type='tel'
+                placeholder='Teléfono (ej: 999999999)'
                 required
-                value={formData.password}
+                value={formData.phone_number}
                 onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
+                  setFormData({ ...formData, phone_number: e.target.value })
                 }
                 disabled={loading}
               />
+            </div>
+
+            <div className='space-y-2'>
+              <div className='space-y-2'>
+                <div className='relative bg-white rounded-md' >
+                  <Input
+                    id='password'
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder='Contraseña'
+                    required
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    disabled={loading}
+                    className='pr-10' // Add padding for the icon
+                  />
+                  <button
+                    type='button'
+                    onClick={() => setShowPassword(!showPassword)}
+                    className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none'
+                    tabIndex={-1} // Remove from tab sequence
+                    disabled={loading}
+                  >
+                    {showPassword ? (
+                      <EyeOff
+                        className='h-5 w-5'
+                        aria-hidden='true'
+                      />
+                    ) : (
+                      <Eye
+                        className='h-5 w-5'
+                        aria-hidden='true'
+                      />
+                    )}
+                    <span className='sr-only'>
+                      {showPassword
+                        ? 'Ocultar contraseña'
+                        : 'Mostrar contraseña'}
+                    </span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             <Button
@@ -229,15 +204,6 @@ export default function SignInPage() {
               )}
             </Button>
           </form>
-
-          <div className='mt-4 text-center text-sm'>
-            <Link
-              href='/sign-up'
-              className='text-blue-600 hover:text-blue-500'
-            >
-              ¿No tienes cuenta? Regístrate
-            </Link>
-          </div>
         </CardContent>
       </Card>
     </div>

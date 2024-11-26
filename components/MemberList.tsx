@@ -9,8 +9,9 @@ import {
 } from '@/components/ui/table';
 import { EditIcon, Trash2Icon,  EyeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { MemberResponse } from '@/types';
+// import { MemberResponse } from '@/types';
 import { useRouter, useParams } from 'next/navigation';
+import { MemberResponse } from '@/types';
 
 const formatDateForInput = (dateString: string | null | undefined): string => {
   if (!dateString) return '';
@@ -23,6 +24,30 @@ const formatDateForInput = (dateString: string | null | undefined): string => {
   }
 };
 
+// export interface MemberResponse {
+//   id: string;
+//   full_name: string;
+//   document_type: string;
+//   document_number: string;
+//   member_role: string;
+//   productive_activity?: string; // Consistent optional modifier
+//   birth_date?: string;
+//   phone?: string;
+//   address?: string;
+//   join_date?: string;
+//   gender?: string;
+//   additional_info?: string;
+//   beneficiary_full_name?: string;
+//   beneficiary_document_type?: string;
+//   beneficiary_document_number?: string;
+//   beneficiary_phone?: string;
+//   beneficiary_address?: string;
+//   username?: string;
+//   email?: string;
+//   role?: string;
+//   status?: string;
+// }
+
 
 interface MembersListProps {
   members: MemberResponse[];
@@ -32,18 +57,19 @@ interface MembersListProps {
 
 
 
-const formatDateForAPI = (dateString: string): string => {
-  if (!dateString) return '';
-  try {
-    const date = new Date(dateString);
-    return date.toISOString();
-  } catch (error) {
-    console.error('Date formatting error:', error);
-    return '';
-  }
-};
+// const formatDateForAPI = (dateString: string): string => {
+//   if (!dateString) return '';
+//   try {
+//     const date = new Date(dateString);
+//     return date.toISOString();
+//   } catch (error) {
+//     console.error('Date formatting error:', error);
+//     return '';
+//   }
+// };
 
 export const MembersList: React.FC<MembersListProps> = ({ members, onEdit, onDelete }) => {
+  console.log("members: ", members);
   const router = useRouter();
   const params = useParams();
 

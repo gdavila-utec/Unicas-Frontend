@@ -58,11 +58,7 @@ export default function PrestamoDetails({ id }: PrestamoDetailsProps) {
 
   return (
     <div className='container mx-auto p-4 space-y-6 bg-white rounded-md w-full bg-red-600'>
-      <div>
-        <Link href={`/juntas/${juntaId}`}>
-          <Button>Regresar a Junta</Button>
-        </Link>
-      </div>
+
       <div className='flex items-center justify-between'>
         <div className='space-y-1'>
           <h1 className='text-2xl font-semibold tracking-tight'>

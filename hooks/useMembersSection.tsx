@@ -5,6 +5,53 @@ import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/utils/api';
 import { useError } from '@/hooks/useError';
 import { MemberResponse, NewMemberForm } from '@/types';
+import { UseMutationResult } from '@tanstack/react-query';
+
+export type DocumentType = 'DNI' | 'CE';
+
+// export interface MemberResponse {
+//   id: string;
+//   full_name: string;
+//     document_type: DocumentType;
+//   document_number: string;
+//   member_role: string;
+//   productive_activity?: string;
+//   birth_date?: string;
+//   phone?: string;
+//   address?: string;
+//   join_date?: string;
+//   gender?: string;
+//   additional_info?: string;
+//   beneficiary_full_name?: string;
+//   beneficiary_document_type?: string;
+//   beneficiary_document_number?: string;
+//   beneficiary_phone?: string;
+//   beneficiary_address?: string;
+// }
+
+// export interface NewMemberForm {
+//   id: string;
+//   full_name: string;
+//   document_type: 'DNI' | 'CE';
+//   document_number: string;
+//   role: 'socio' | 'presidente' |  'facilitador';
+//   productive_activity: string;
+//   birth_date: string;
+//   phone: string;
+//   address: string;
+//   join_date: string;
+//   gender: 'Masculino' | 'Femenino';
+//   password: string;
+//   additional_info: string;
+//   beneficiary: {
+//     full_name: string;
+//     document_type: 'DNI' | 'CE';
+//     document_number: string;
+//     phone: string;
+//     address: string;
+//   };
+// }
+
 
 const defaultFormValues: NewMemberForm = {
   id: '',
@@ -28,7 +75,6 @@ const defaultFormValues: NewMemberForm = {
     address: '',
   },
 };
-
 interface UseMembersSectionResult {
   members: MemberResponse[];
   isLoading: boolean;
@@ -43,7 +89,19 @@ interface UseMembersSectionResult {
   handleDeleteMember: (memberId: string) => Promise<void>;
   setNewMember: (member: NewMemberForm) => void;
   resetForm: () => void;
+  updateMemberMutation: UseMutationResult<
+    unknown,
+    unknown,
+    UpdateMemberVariables,
+    unknown
+  >;
 }
+
+// Make sure to define UpdateMemberVariables type
+type UpdateMemberVariables = {
+  memberId: string;
+  data: NewMemberForm;
+};
 
 export const useMembersSection = (juntaId: string): UseMembersSectionResult => {
   const { toast } = useToast();
@@ -119,7 +177,7 @@ export const useMembersSection = (juntaId: string): UseMembersSectionResult => {
       });
       resetForm();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       setError(error);
       const errorMessage = perro || 'Error al agregar miembro';
       toast({
@@ -131,40 +189,40 @@ export const useMembersSection = (juntaId: string): UseMembersSectionResult => {
   });
 
   // Mutation for updating members
-  const updateMemberMutation = useMutation({
-    mutationFn: async ({
-      memberId,
-      data,
-    }: {
-      memberId: string;
-      data: NewMemberForm;
-    }) => {
-      const formattedData = {
-        ...data,
-        birth_date: formatDateForAPI(data.birth_date),
-        join_date: formatDateForAPI(data.join_date),
-      };
-      return api.put(`members/${juntaId}/${memberId}`, formattedData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['members', juntaId] });
-      toast({
-        title: 'Éxito',
-        description: 'Miembro actualizado correctamente',
-      });
-      resetForm();
-    },
-    onError: (error: any) => {
-      setError(error);
-      const errorMessage = perro || 'Error al actualizar miembro';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    },
-  });
-
+   const updateMemberMutation = useMutation({
+     mutationFn: async ({
+       memberId,
+       data,
+     }: {
+       memberId: string;
+       data: NewMemberForm;
+     }) => {
+       const formattedData = {
+         ...data,
+         birth_date: formatDateForAPI(data.birth_date),
+         join_date: formatDateForAPI(data.join_date),
+       };
+       const response = await api.patch(`members/${memberId}`, formattedData);
+       return response;
+     },
+     onSuccess: () => {
+       queryClient.invalidateQueries({ queryKey: ['members', juntaId] });
+       toast({
+         title: 'Éxito',
+         description: 'Miembro actualizado correctamente',
+       });
+       resetForm();
+     },
+     onError: (error: unknown) => {
+       setError(error);
+       const errorMessage = perro || 'Error al actualizar miembro';
+       toast({
+         title: 'Error',
+         description: errorMessage,
+         variant: 'destructive',
+       });
+     },
+   });
   // Mutation for deleting members
   const deleteMemberMutation = useMutation({
     mutationFn: (memberId: string) =>
@@ -191,7 +249,7 @@ export const useMembersSection = (juntaId: string): UseMembersSectionResult => {
       setEditingMemberId(member.id);
 
       const editableMember: NewMemberForm = {
-        id: member.id,
+        id: member.id || '',
         full_name: member.full_name || '',
         document_type: member.document_type || 'DNI',
         document_number: member.document_number || '',
@@ -204,7 +262,7 @@ export const useMembersSection = (juntaId: string): UseMembersSectionResult => {
         address: member.address || '',
         join_date: member.join_date ? formatDateForInput(member.join_date) : '',
         gender: member.gender || 'Masculino',
-        password: '',
+        password: '', // This might be missing
         additional_info: member.additional_info || '',
         beneficiary: {
           full_name: member.beneficiary_full_name || '',
@@ -215,7 +273,7 @@ export const useMembersSection = (juntaId: string): UseMembersSectionResult => {
         },
       };
 
-      setNewMember(editableMember);
+      setNewMember(editableMember); // Here's where we need to ensure password is included
     } catch (error) {
       console.error('Error setting edit mode:', error);
       toast({
@@ -276,5 +334,6 @@ export const useMembersSection = (juntaId: string): UseMembersSectionResult => {
     handleDeleteMember,
     setNewMember,
     resetForm,
+    updateMemberMutation,
   };
 };

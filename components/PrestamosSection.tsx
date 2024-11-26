@@ -5,7 +5,6 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { InputAmount } from '@/components/ui/input-amount';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import EnhancedInputAmount from '@/components/ui/enhanced-input-amount';
 import { useBoardConfig } from '@/store/configValues';
 import { usePrestamos } from '@/hooks/usePrestamosSection';
 import type { GuaranteeType } from '@/types';
@@ -245,7 +245,7 @@ const PrestamosSection: React.FC<PrestamosSectionProps> = ({ juntaId }) => {
 
               <div className='space-y-2'>
                 <Label htmlFor='amount'>Monto Solicitado</Label>
-                <InputAmount
+                <EnhancedInputAmount
                   type='number'
                   id='amount'
                   name='amount'
@@ -256,7 +256,7 @@ const PrestamosSection: React.FC<PrestamosSectionProps> = ({ juntaId }) => {
 
               <div className='space-y-2'>
                 <Label htmlFor='monthlyInterest'>Interés Mensual (%)</Label>
-                <Input
+                <EnhancedInputAmount
                   type='number'
                   id='monthlyInterest'
                   name='monthlyInterest'
@@ -457,7 +457,7 @@ const PrestamosSection: React.FC<PrestamosSectionProps> = ({ juntaId }) => {
                           variant='ghost'
                           size='icon'
                           onClick={() =>
-                            router.push(`/prestamo/${prestamo.id}`)
+                            router.push(`/juntas/${juntaId}/prestamos/${prestamo.id}`)
                           }
                         >
                           <Pencil className='h-4 w-4' />

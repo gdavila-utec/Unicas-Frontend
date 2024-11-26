@@ -115,7 +115,7 @@ export const Ajustes = () => {
               <FormField
                 control={form.control}
                 name='fecha_asamblea'
-                render={({ field }) => (
+                render={() => (
                   <FormItem className='flex flex-col'>
                     {/* <FormLabel>Dia de asamblea</FormLabel> */}
 

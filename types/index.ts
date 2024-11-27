@@ -301,7 +301,7 @@ export type Gender = 'Masculino' | 'Femenino';
 
 export type Role = 'ADMIN' | 'USER';
 
-export type MemberRole = 'socio' | 'presidente' | 'facilitador';
+export type MemberRole = 'socio' | 'presidente' | 'facilitador' | 'secretario' | 'tesorero';
 
 export type UserStatus = 'Activo' | 'Inactivo' | 'Pendiente';
 

@@ -9,7 +9,10 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
-import { useMembersSection } from '@/hooks/useMembersSection';
+import {
+  useMembersSection,
+  defaultFormValues,
+} from '@/hooks/useMembersSection';
 import { MembersList } from './MemberList';
 import MemberForm from './MemberForm';
 import {  NewMemberForm } from '../types';
@@ -112,7 +115,7 @@ const MembersSection: React.FC<MembersSectionProps> = ({ juntaId }) => {
             </DialogHeader>
             <MemberForm
               key={`form-${isEditing ? 'edit' : 'create'}-${Date.now()}`}
-              initialData={newMember}
+              initialData={isEditing ? newMember : defaultFormValues} // Use defaultFormValues for new members
               isLoading={isLoading}
               isEditing={isEditing}
               onSubmit={handleFormSubmit}

@@ -53,7 +53,7 @@ export type DocumentType = 'DNI' | 'CE';
 // }
 
 
-const defaultFormValues: NewMemberForm = {
+export const defaultFormValues: NewMemberForm = {
   id: '',
   full_name: '',
   document_type: 'DNI',
@@ -337,3 +337,5 @@ export const useMembersSection = (juntaId: string): UseMembersSectionResult => {
     updateMemberMutation,
   };
 };
+
+

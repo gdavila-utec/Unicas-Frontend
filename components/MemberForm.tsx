@@ -1,4 +1,8 @@
-import React, { memo, useEffect } from 'react';
+import React, { memo, useEffect, useState } from 'react';
+import { z } from "zod";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,11 +15,87 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  MemberRole,
-  DocumentType,
-  Gender,
+
   NewMemberForm,
 } from '@/types';
+
+// Validation schema
+const PHONE_REGEX = /^[0-9]{9}$/;
+const DNI_REGEX = /^[0-9]{8}$/;
+const CE_REGEX = /^[0-9]{9}$/;
+
+// const beneficiarySchema = z.object({
+//   full_name: z.string().min(1, 'Nombre del beneficiario es requerido'),
+//   document_type: z.enum(['DNI', 'CE'] as const),
+//   document_number: z.string().refine(
+//     (val) => val.match(DNI_REGEX) || val.match(CE_REGEX),
+//     () => ({
+//       message: `Número de documento inválido`,
+//     })
+//   ),
+//   phone: z
+//     .string()
+//     .regex(PHONE_REGEX, 'Número de teléfono debe tener 9 dígitos'),
+//   address: z.string().min(1, 'Dirección del beneficiario es requerida'),
+// });
+
+const memberFormSchema = z.object({
+  id: z.string(),
+  full_name: z.string().min(1, 'Nombre completo es requerido'),
+  document_type: z.enum(['DNI', 'CE'] as const),
+  document_number: z.string().refine(
+    (val) => val.match(DNI_REGEX) || val.match(CE_REGEX),
+    () => ({
+      message: `Número de documento inválido`,
+    })
+  ),
+  role: z.enum([
+    'socio',
+    'presidente',
+    'tesorero',
+    'secretario',
+    'facilitador',
+  ] as const),
+  productive_activity: z.string(),
+  birth_date: z.string().refine(
+    (date) => {
+      const birthDate = new Date(date);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      console.log('Birth date validation:', { date, age, isValid: age >= 18 });
+      return age >= 18;
+    },
+    { message: 'El miembro debe ser mayor de 18 años' }
+  ),
+  phone: z
+    .string()
+    .regex(PHONE_REGEX, 'Número de teléfono debe tener 9 dígitos'),
+  address: z.string().min(1, 'Dirección es requerida'),
+  join_date: z
+    .string()
+    .refine((date) => new Date(date) <= new Date(), {
+      message: 'La fecha de ingreso no puede ser futura',
+    }),
+  gender: z.enum(['Masculino', 'Femenino', 'Otro'] as const),
+  password: z.string().min(6, 'La contraseña debe tener al menos 8 caracteres'),
+  additional_info: z.string(),
+  beneficiary: z
+    .object({
+      full_name: z.string().min(1, 'Nombre del beneficiario es requerido'),
+      document_type: z.enum(['DNI', 'CE'] as const),
+      document_number: z.string().refine(
+        (val) => val.match(DNI_REGEX) || val.match(CE_REGEX),
+        () => ({
+          message: `Número de documento inválido`,
+        })
+      ),
+      phone: z
+        .string()
+        .regex(PHONE_REGEX, 'Número de teléfono debe tener 9 dígitos'),
+      address: z.string().min(1, 'Dirección del beneficiario es requerida'),
+    })
+    .required(),
+});
 
 interface MemberFormProps {
   initialData: NewMemberForm;
@@ -25,6 +105,7 @@ interface MemberFormProps {
   onCancel: () => void;
   formatDateForInput: (date: string) => string;
 }
+
 const MemberForm = memo(
   ({
     initialData,
@@ -34,202 +115,328 @@ const MemberForm = memo(
     onCancel,
     formatDateForInput,
   }: MemberFormProps) => {
-    const [password, setPassword] = React.useState(initialData.password);
-    const [showPassword, setShowPassword] = React.useState(false);
-    // Change the type here to NewMemberForm instead of MemberFormData
-    const [formData, setFormData] = React.useState<NewMemberForm>(() => {
-      // Include password in the initial state
-      return {
-        ...initialData,
-        password: initialData.password, // Make sure password is included
-      };
+    const { toast } = useToast();
+    const [showPassword, setShowPassword] = useState(false);
+    const [wasSubmitted, setWasSubmitted] = useState(false);
+    console.log("wasSubmitted: ", wasSubmitted);
+    console.log("isEditing: ", isEditing);
+
+    const {
+      control,
+      handleSubmit,
+      formState: { errors },
+      reset,
+    } = useForm<NewMemberForm>({
+      resolver: zodResolver(memberFormSchema),
+      defaultValues: initialData,
+      mode: 'onBlur',
+      reValidateMode: 'onChange',
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      const finalPassword = password || initialData.password;
-      if (!finalPassword) {
-        return;
+
+useEffect(() => {
+  if (!wasSubmitted) {
+    reset(initialData);
+  }
+}, [initialData, reset, wasSubmitted]);
+
+  const onFormSubmit = handleSubmit(
+    async (data) => {
+      setWasSubmitted(true);
+      try {
+        await onSubmit(data);
+        toast({
+          title: isEditing ? 'Miembro actualizado' : 'Miembro agregado',
+          description: `${data.full_name} ha sido ${
+            isEditing ? 'actualizado' : 'agregado'
+          } exitosamente`,
+        });
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description:
+            'Hubo un error al procesar el formulario. Por favor intente nuevamente.',
+          variant: 'destructive',
+        });
+        console.error('Form submission error:', error);
       }
+    },
+    (formErrors) => {
+      setWasSubmitted(true);
+      // Get all error messages
+      const errorMessages = Object.entries(formErrors)
+        .map(([field, error]) => {
+          if (field === 'beneficiary') {
+            const beneficiaryErrors = error as Record<
+              string,
+              { message: string }
+            >;
+            return Object.values(beneficiaryErrors)
+              .map((err) => err.message)
+              .join(', ');
+          }
+          return error.message;
+        })
+        .filter(Boolean)
+        .join(', ');
 
-      const completeFormData: NewMemberForm = {
-        ...formData,
-        password: finalPassword,
-        id: initialData.id || '',
-        document_type: formData.document_type || 'DNI',
-        role: formData.role || 'socio',
-        gender: formData.gender || 'Masculino',
-        birth_date:
-          formData.birth_date || new Date().toISOString().split('T')[0],
-        join_date: formData.join_date || new Date().toISOString().split('T')[0],
-        beneficiary: {
-          ...formData.beneficiary,
-          document_type: formData.beneficiary.document_type || 'DNI',
-        },
-      };
-
-      onSubmit(completeFormData);
-    };
-
-    useEffect(() => {
-      // const { password: currentPassword, ...restData } = initialData;
-      setFormData({
-        ...initialData,
-        password: password || initialData.password, // Make sure password is included
+      toast({
+        title: 'Campos inválidos',
+        description: 'Por favor revise los siguientes campos: ' + errorMessages,
+        variant: 'destructive',
       });
-    }, [initialData, password]);
+      console.error('Validation errors:', formErrors);
+    }
+  );
+    
+    const handleCancel = () => {
+      setWasSubmitted(false);
+      onCancel();
+    };
 
     return (
       <form
-        onSubmit={handleSubmit}
+        onSubmit={onFormSubmit}
         className='space-y-6'
       >
         <div>
           <h3 className='text-lg font-medium'>Información del Miembro</h3>
           <div className='grid grid-cols-2 gap-4 mt-4'>
+            {/* Nombre Completo */}
             <div>
               <Label htmlFor='full_name'>Nombre Completo</Label>
-              <Input
-                id='full_name'
-                value={formData.full_name}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    full_name: e.target.value,
-                  }))
-                }
-                required
+              <Controller
+                name='full_name'
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    className={errors.full_name ? 'border-red-500' : ''}
+                  />
+                )}
               />
+              {errors.full_name && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.full_name.message}
+                </p>
+              )}
             </div>
+
+            {/* Tipo de Documento */}
             <div>
               <Label htmlFor='document_type'>Tipo de Documento</Label>
-              <Select
-                value={formData.document_type}
-                onValueChange={(value: DocumentType) => {
-                  setFormData((prev) => ({ ...prev, document_type: value }));
-                }}
-              >
-                <SelectTrigger id='document_type'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='DNI'>DNI</SelectItem>
-                  <SelectItem value='CE'>CE</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name='document_type'
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger
+                      className={errors.document_type ? 'border-red-500' : ''}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='DNI'>DNI</SelectItem>
+                      <SelectItem value='CE'>CE</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.document_type && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.document_type.message}
+                </p>
+              )}
             </div>
+
+            {/* Número de Documento */}
             <div>
               <Label htmlFor='document_number'>Número de Documento</Label>
-              <Input
-                id='document_number'
-                value={formData.document_number}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    document_number: e.target.value,
-                  }))
-                }
-                required
+              <Controller
+                name='document_number'
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    className={errors.document_number ? 'border-red-500' : ''}
+                  />
+                )}
               />
+              {errors.document_number && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.document_number.message}
+                </p>
+              )}
             </div>
+
+            {/* Cargo */}
             <div>
               <Label htmlFor='role'>Cargo</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value: MemberRole) =>
-                  setFormData((prev) => ({ ...prev, role: value }))
-                }
-              >
-                <SelectTrigger id='role'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='socio'>Socio</SelectItem>
-                  <SelectItem value='presidente'>Presidente</SelectItem>
-                  <SelectItem value='tesorero'>Tesorero</SelectItem>
-                  <SelectItem value='secretario'>Secretario</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name='role'
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger
+                      className={errors.role ? 'border-red-500' : ''}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='socio'>Socio</SelectItem>
+                      <SelectItem value='presidente'>Presidente</SelectItem>
+                      <SelectItem value='tesorero'>Tesorero</SelectItem>
+                      <SelectItem value='secretario'>Secretario</SelectItem>
+                      <SelectItem value='facilitador'>Facilitador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.role && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.role.message}
+                </p>
+              )}
             </div>
+
+            {/* Actividad Productiva */}
             <div>
               <Label htmlFor='productive_activity'>Actividad Productiva</Label>
-              <Input
-                id='productive_activity'
-                value={formData.productive_activity}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    productive_activity: e.target.value,
-                  }))
-                }
+              <Controller
+                name='productive_activity'
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    className={
+                      errors.productive_activity ? 'border-red-500' : ''
+                    }
+                  />
+                )}
               />
             </div>
+
+            {/* Fecha de Nacimiento */}
             <div>
               <Label htmlFor='birth_date'>Fecha de Nacimiento</Label>
-              <Input
-                id='birth_date'
-                type='date'
-                value={formatDateForInput(formData.birth_date)}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    birth_date: e.target.value,
-                  }))
-                }
+              <Controller
+                name='birth_date'
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    type='date'
+                    {...field}
+                    value={formatDateForInput(field.value)}
+                    className={errors.birth_date ? 'border-red-500' : ''}
+                  />
+                )}
               />
+              {errors.birth_date && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.birth_date.message}
+                </p>
+              )}
             </div>
+
+            {/* Teléfono */}
             <div>
               <Label htmlFor='phone'>Celular</Label>
-              <Input
-                id='phone'
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, phone: e.target.value }))
-                }
+              <Controller
+                name='phone'
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    className={errors.phone ? 'border-red-500' : ''}
+                  />
+                )}
               />
+              {errors.phone && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.phone.message}
+                </p>
+              )}
             </div>
+
+            {/* Dirección */}
             <div>
               <Label htmlFor='address'>Dirección</Label>
-              <Input
-                id='address'
-                value={formData.address}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, address: e.target.value }))
-                }
+              <Controller
+                name='address'
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    className={errors.address ? 'border-red-500' : ''}
+                  />
+                )}
               />
+              {errors.address && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.address.message}
+                </p>
+              )}
             </div>
+
+            {/* Fecha de Ingreso */}
             <div>
               <Label htmlFor='join_date'>Fecha de Ingreso</Label>
-              <Input
-                id='join_date'
-                type='date'
-                value={formatDateForInput(formData.join_date)}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    join_date: e.target.value,
-                  }))
-                }
+              <Controller
+                name='join_date'
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    type='date'
+                    {...field}
+                    value={formatDateForInput(field.value)}
+                    className={errors.join_date ? 'border-red-500' : ''}
+                  />
+                )}
               />
+              {errors.join_date && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.join_date.message}
+                </p>
+              )}
             </div>
+
+            {/* Género */}
             <div>
               <Label htmlFor='gender'>Género</Label>
-              <Select
-                value={formData.gender}
-                onValueChange={(value: Gender) =>
-                  setFormData((prev) => ({ ...prev, gender: value }))
-                }
-              >
-                <SelectTrigger id='gender'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='Masculino'>Masculino</SelectItem>
-                  <SelectItem value='Femenino'>Femenino</SelectItem>
-                  <SelectItem value='Otro'>Otro</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name='gender'
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger
+                      className={errors.gender ? 'border-red-500' : ''}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='Masculino'>Masculino</SelectItem>
+                      <SelectItem value='Femenino'>Femenino</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.gender && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.gender.message}
+                </p>
+              )}
             </div>
+
+            {/* Contraseña */}
             <div>
               <Label htmlFor='password'>
                 {isEditing
@@ -237,17 +444,16 @@ const MemberForm = memo(
                   : 'Contraseña'}
               </Label>
               <div className='relative'>
-                <Input
-                  id='password'
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={
-                    isEditing
-                      ? 'Dejar en blanco para mantener la contraseña actual'
-                      : ''
-                  }
-                  required={!isEditing}
+                <Controller
+                  name='password'
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      {...field}
+                      className={errors.password ? 'border-red-500' : ''}
+                    />
+                  )}
                 />
                 <Button
                   type='button'
@@ -290,132 +496,181 @@ const MemberForm = memo(
                       />
                     </svg>
                   )}
-                  <span className='sr-only'>
-                    {showPassword ? 'Hide password' : 'Show password'}
-                  </span>
                 </Button>
               </div>
+              {errors.password && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.password.message}
+                </p>
+              )}
             </div>
-          </div>
-          <div className='mt-4'>
-            <Label htmlFor='additional_info'>Información Adicional</Label>
-            <Textarea
-              id='additional_info'
-              value={formData.additional_info}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  additional_info: e.target.value,
-                }))
-              }
-              className='h-24'
-            />
+
+            {/* Información Adicional */}
+            <div className='col-span-2'>
+              <Label htmlFor='additional_info'>Información Adicional</Label>
+              <Controller
+                name='additional_info'
+                control={control}
+                render={({ field }) => (
+                  // ... (previous code remains the same until the additional_info field)
+                  <Textarea
+                    {...field}
+                    className={errors.additional_info ? 'border-red-500' : ''}
+                    rows={4}
+                  />
+                )}
+              />
+              {errors.additional_info && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.additional_info.message}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
+        {/* Beneficiary Section */}
         <div>
           <h3 className='text-lg font-medium'>Información del Beneficiario</h3>
           <div className='grid grid-cols-2 gap-4 mt-4'>
+            {/* Nombre del Beneficiario */}
             <div>
-              <Label htmlFor='beneficiary_full_name'>Nombre Completo</Label>
-              <Input
-                id='beneficiary_full_name'
-                value={formData.beneficiary.full_name}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    beneficiary: {
-                      ...prev.beneficiary,
-                      full_name: e.target.value,
-                    },
-                  }))
-                }
+              <Label htmlFor='beneficiary.full_name'>Nombre Completo</Label>
+              <Controller
+                name='beneficiary.full_name'
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    className={
+                      errors.beneficiary?.full_name ? 'border-red-500' : ''
+                    }
+                  />
+                )}
               />
+              {errors.beneficiary?.full_name && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.beneficiary.full_name.message}
+                </p>
+              )}
             </div>
+
+            {/* Tipo de Documento del Beneficiario */}
             <div>
-              <Label htmlFor='beneficiary_document_type'>
+              <Label htmlFor='beneficiary.document_type'>
                 Tipo de Documento
               </Label>
-              <Select
-                value={formData.beneficiary.document_type}
-                onValueChange={(value: DocumentType) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    beneficiary: {
-                      ...prev.beneficiary,
-                      document_type: value,
-                    },
-                  }))
-                }
-              >
-                <SelectTrigger id='beneficiary_document_type'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='DNI'>DNI</SelectItem>
-                  <SelectItem value='CE'>CE</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name='beneficiary.document_type'
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger
+                      className={
+                        errors.beneficiary?.document_type
+                          ? 'border-red-500'
+                          : ''
+                      }
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='DNI'>DNI</SelectItem>
+                      <SelectItem value='CE'>CE</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.beneficiary?.document_type && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.beneficiary.document_type.message}
+                </p>
+              )}
             </div>
+
+            {/* Número de Documento del Beneficiario */}
             <div>
-              <Label htmlFor='beneficiary_document_number'>
+              <Label htmlFor='beneficiary.document_number'>
                 Número de Documento
               </Label>
-              <Input
-                id='beneficiary_document_number'
-                value={formData.beneficiary.document_number}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    beneficiary: {
-                      ...prev.beneficiary,
-                      document_number: e.target.value,
-                    },
-                  }))
-                }
+              <Controller
+                name='beneficiary.document_number'
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    className={
+                      errors.beneficiary?.document_number
+                        ? 'border-red-500'
+                        : ''
+                    }
+                  />
+                )}
               />
+              {errors.beneficiary?.document_number && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.beneficiary.document_number.message}
+                </p>
+              )}
             </div>
+
+            {/* Teléfono del Beneficiario */}
             <div>
-              <Label htmlFor='beneficiary_phone'>Celular</Label>
-              <Input
-                id='beneficiary_phone'
-                value={formData.beneficiary.phone}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    beneficiary: {
-                      ...prev.beneficiary,
-                      phone: e.target.value,
-                    },
-                  }))
-                }
+              <Label htmlFor='beneficiary.phone'>Celular</Label>
+              <Controller
+                name='beneficiary.phone'
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    className={
+                      errors.beneficiary?.phone ? 'border-red-500' : ''
+                    }
+                  />
+                )}
               />
+              {errors.beneficiary?.phone && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.beneficiary.phone.message}
+                </p>
+              )}
             </div>
+
+            {/* Dirección del Beneficiario */}
             <div className='col-span-2'>
-              <Label htmlFor='beneficiary_address'>Dirección</Label>
-              <Input
-                id='beneficiary_address'
-                value={formData.beneficiary.address}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    beneficiary: {
-                      ...prev.beneficiary,
-                      address: e.target.value,
-                    },
-                  }))
-                }
+              <Label htmlFor='beneficiary.address'>Dirección</Label>
+              <Controller
+                name='beneficiary.address'
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    className={
+                      errors.beneficiary?.address ? 'border-red-500' : ''
+                    }
+                  />
+                )}
               />
+              {errors.beneficiary?.address && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.beneficiary.address.message}
+                </p>
+              )}
             </div>
           </div>
         </div>
 
+        {/* Form Actions */}
         <div className='flex justify-end gap-2'>
           {isEditing && (
             <Button
               type='button'
               variant='outline'
-              onClick={onCancel}
+              onClick={handleCancel}
+              disabled={isLoading}
             >
               Cancelar
             </Button>
@@ -435,7 +690,5 @@ const MemberForm = memo(
     );
   }
 );
-
 MemberForm.displayName = 'MemberForm';
-
 export default MemberForm;

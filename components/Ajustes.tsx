@@ -15,7 +15,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-
+import EnhancedInputAmount from '@/components/ui/enhanced-input-amount';
 import {
   Form,
   FormControl,
@@ -145,10 +145,17 @@ export const Ajustes = () => {
                         step='5'
                         {...field}
                       /> */}
-                      <InputAmount
+                      <EnhancedInputAmount
                         {...field}
                         type='number'
                       />
+                      {/* <EnhancedInputAmount
+                        type='number'
+                        id='monthlyInterest'
+                        name='monthlyInterest'
+                        value={monthlyInterestRate}
+                        disabled
+                      /> */}
                     </FormControl>
                     <FormMessage />
                   </FormItem>

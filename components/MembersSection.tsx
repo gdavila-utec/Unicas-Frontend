@@ -114,8 +114,11 @@ const MembersSection: React.FC<MembersSectionProps> = ({ juntaId }) => {
               </DialogTitle>
             </DialogHeader>
             <MemberForm
-              key={`form-${isEditing ? 'edit' : 'create'}-${Date.now()}`}
-              initialData={isEditing ? newMember : defaultFormValues} // Use defaultFormValues for new members
+              key={`form-${isEditing ? 'edit' : 'create'}-${
+                isEditing ? newMember.id : 'new'
+                }`}
+              juntaId={juntaId}
+              initialData={isEditing ? newMember : defaultFormValues}
               isLoading={isLoading}
               isEditing={isEditing}
               onSubmit={handleFormSubmit}

@@ -29,7 +29,7 @@ const baseMemberSchema = z.object({
       message: 'Número de documento inválido',
     })
   ),
-  role: z.enum(['socio', 'directivo', 'organizacion', 'facilitador'] as const),
+  role: z.enum(['socio', 'directivo', 'facilitador', 'organizacion'] as const),
   productive_activity: z.string(),
   birth_date: z.string().refine(
     (date) => {
@@ -47,7 +47,7 @@ const baseMemberSchema = z.object({
   join_date: z.string().refine((date) => new Date(date) <= new Date(), {
     message: 'La fecha de ingreso no puede ser futura',
   }),
-  gender: z.enum(['Masculino', 'Femenino', 'Otro'] as const),
+  gender: z.enum(['Masculino', 'Femenino'] as const),
   additional_info: z.string(),
   beneficiary: beneficiarySchema,
 });
@@ -83,3 +83,98 @@ export const isEditMemberForm = (
 ): form is EditMemberForm => {
   return 'id' in form;
 };
+
+
+export const capitalMovementSchema = z.object({
+  id: z.string(),
+  amount: z.number(),
+  type: z.string(),
+  direction: z.string(),
+  description: z.string(),
+  createdAt: z.string(),
+  juntaId: z.string(),
+  prestamoId: z.string().nullable(),
+  multaId: z.string().nullable(),
+  accionId: z.string().nullable(),
+  pagoId: z.string().nullable(),
+});
+
+export const accionDetalleSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  amount: z.number(),
+  shareValue: z.number(),
+  description: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  juntaId: z.string(),
+  memberId: z.string(),
+  affects_capital: z.boolean(),
+  agendaItemId: z.string().nullable(),
+  capital_movements: z.array(capitalMovementSchema),
+});
+
+export const prestamoActivoSchema = z.object({
+  id: z.string(),
+  monto_solicitado: z.number(),
+  monto_adeudo: z.number(),
+  cuotas_pendientes: z.number(),
+  monto_proxima_cuota: z.number(),
+  fecha_proxima_cuota: z.string(),
+  pagos_realizados: z.number(),
+  estado: z.string(),
+});
+
+export const memberProfileSchema = z.object({
+  member: baseMemberSchema.extend({
+    id: z.string(),
+    estado: z.string(),
+  }),
+  acciones: z.object({
+    detalle: z.array(accionDetalleSchema),
+    resumen: z.object({
+      cantidad: z.number(),
+      valor: z.number(),
+    }),
+  }),
+  prestamos: z.object({
+    activos: z.array(prestamoActivoSchema),
+    historial: z.array(prestamoActivoSchema),
+  }),
+  multas: z.object({
+    pendientes: z.array(z.unknown()),
+    historial: z.array(z.unknown()),
+  }),
+});
+
+export type MemberProfileData = z.infer<typeof memberProfileSchema>;
+
+
+export function transformMemberToFormData(
+  memberInfo: MemberProfileData['member']
+): EditMemberForm {
+  return {
+    id: memberInfo.id,
+    full_name: memberInfo.full_name,
+    document_type: memberInfo.document_type,
+    document_number: memberInfo.document_number,
+    role: memberInfo.role,
+    productive_activity: memberInfo.productive_activity,
+    birth_date: memberInfo.birth_date,
+    phone: memberInfo.phone,
+    address: memberInfo.address,
+    join_date: memberInfo.join_date,
+    gender: memberInfo.gender,
+    additional_info: memberInfo.additional_info || '',
+    beneficiary: {
+      full_name: memberInfo.beneficiary?.full_name || '',
+      document_type: memberInfo.beneficiary?.document_type || 'DNI',
+      document_number: memberInfo.beneficiary?.document_number || '',
+      phone: memberInfo.beneficiary?.phone || '',
+      address: memberInfo.beneficiary?.address || '',
+    },
+    // Password is optional for editing
+  };
+}
+
+

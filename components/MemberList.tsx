@@ -69,7 +69,7 @@ interface MembersListProps {
 // };
 
 export const MembersList: React.FC<MembersListProps> = ({ members, onEdit, onDelete }) => {
-  console.log("members: ", members);
+
   const router = useRouter();
   const params = useParams();
 

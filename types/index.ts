@@ -1,4 +1,4 @@
-import { FC } from 'react';
+
 import { LucideIcon } from 'lucide-react';
 
 
@@ -30,10 +30,10 @@ export interface FormData {
     address: string;
   };
 }
-
+export type UpdateProperty<T, K extends keyof T, V> = Omit<T, K> & { [P in K]: V };
 export type NewMemberForm = FormData & {
   id: string;
-  password: string;
+  password?: string;
 };
 
 // export interface FormData {
@@ -194,6 +194,13 @@ export interface JuntaMember {
   joinedAt: Date;
   user: User;
   junta: Junta;
+}
+
+export interface MemberProfile {
+  member: Member;
+  acciones: Accion[];
+  prestamos: Prestamo[];
+  multas: Multa[];
 }
 
 export interface Junta {

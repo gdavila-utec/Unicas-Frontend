@@ -8,14 +8,16 @@ import {
   logAdminApiError,
 } from '@/utils/security-logger';
 
-// Helper function to handle CORS
+// Helper function to apply consistent CORS headers across all responses
+// This ensures our application maintains proper cross-origin resource sharing rules
 function corsResponse(response: NextResponse) {
   response.headers.set('Access-Control-Allow-Credentials', 'true');
 
-  // Allow both development and production origins
+  // Determine the correct origin based on environment
   const origin =
     process.env.NODE_ENV === 'production'
-      ? 'https://unicas-frontend-production.up.railway.app'
+      ? process.env.NEXT_PUBLIC_FRONTEND_URL ||
+        'https://unicas-frontend-nuevaui.up.railway.app'
       : 'http://localhost:3000';
 
   response.headers.set('Access-Control-Allow-Origin', origin);
@@ -30,7 +32,7 @@ function corsResponse(response: NextResponse) {
   return response;
 }
 
-// Helper function to create error response
+// Creates standardized error responses with appropriate status codes and CORS headers
 function createErrorResponse(message: string, status: number) {
   return corsResponse(
     new NextResponse(JSON.stringify({ message }), {
@@ -42,13 +44,13 @@ function createErrorResponse(message: string, status: number) {
   );
 }
 
-// Helper function to decode and validate JWT
+// Validates and decodes JWT tokens, checking for expiration
 function decodeToken(token: string) {
   try {
     const [, payload] = token.split('.');
     const decodedPayload = JSON.parse(atob(payload));
 
-    // Check token expiration
+    // Verify token hasn't expired
     const now = Math.floor(Date.now() / 1000);
     if (decodedPayload.exp && decodedPayload.exp < now) {
       throw new Error('Token expired');
@@ -60,7 +62,7 @@ function decodeToken(token: string) {
   }
 }
 
-// Helper to check if route requires admin access
+// Determines if a route requires admin privileges
 function isAdminRoute(pathname: string): boolean {
   const adminRoutes = [
     '/admin',
@@ -83,10 +85,11 @@ export function middleware(request: NextRequest) {
     return corsResponse(new NextResponse(null, { status: 200 }));
   }
 
+  // Extract token from cookies and get the requested path
   const token = request.cookies.get('token')?.value;
   const { pathname } = request.nextUrl;
 
-  // Public routes that don't require authentication
+  // Allow access to public routes without authentication
   if (
     pathname.startsWith('/sign-in') ||
     pathname.startsWith('/sign-up') ||
@@ -97,7 +100,7 @@ export function middleware(request: NextRequest) {
     return corsResponse(NextResponse.next());
   }
 
-  // Check if user is authenticated
+  // Handle cases where no token is provided
   if (!token) {
     logSecurityEvent(
       createSecurityLog(request, 'UNAUTHORIZED', {
@@ -114,7 +117,7 @@ export function middleware(request: NextRequest) {
     return corsResponse(NextResponse.redirect(signInUrl));
   }
 
-  // Decode and validate token
+  // Validate and decode the provided token
   const decodedToken = decodeToken(token);
   if (!decodedToken) {
     logSecurityEvent(
@@ -132,11 +135,11 @@ export function middleware(request: NextRequest) {
     return corsResponse(NextResponse.redirect(signInUrl));
   }
 
-  // Check admin access for protected routes
+  // Handle admin route access control
   if (isAdminRoute(pathname)) {
     const isApiRequest = pathname.startsWith('/api/');
 
-    // Log admin route access attempt
+    // Log all attempts to access admin routes
     if (isApiRequest) {
       logAdminApiRequest(request, decodedToken.sub, decodedToken.role);
     } else {
@@ -148,8 +151,8 @@ export function middleware(request: NextRequest) {
       );
     }
 
+    // Verify admin role and handle unauthorized access
     if (decodedToken.role !== 'ADMIN') {
-      // Log denied admin access
       if (isApiRequest) {
         logAdminApiError(
           request,
@@ -187,11 +190,10 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Handle specific role-based access for other routes
+  // Handle access control for junta-specific routes
   if (pathname.startsWith('/juntas/')) {
     const allowedRoles = ['ADMIN', 'FACILITADOR'];
     if (!allowedRoles.includes(decodedToken.role)) {
-      // Log denied access to juntas
       logSecurityEvent(
         createSecurityLog(request, 'ACCESS_DENIED', {
           userId: decodedToken.sub,
@@ -207,17 +209,14 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  // Allow the request to proceed if all checks pass
   return corsResponse(NextResponse.next());
 }
 
+// Configure which routes the middleware should run on
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
+    // Match all paths except Next.js internal routes
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

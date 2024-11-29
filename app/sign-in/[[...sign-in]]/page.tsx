@@ -15,6 +15,7 @@ import Cookies from 'js-cookie';
 import axiosInstance from '../../../utils/axios';
 import { Eye, EyeOff } from 'lucide-react';
 import logo from '@/public/logo.png';
+import { Junta } from '@/types';
 
 
 interface FormData {
@@ -31,6 +32,7 @@ interface LoginResponse {
     username?: string;
     email?: string;
     phone_number?: string;
+    juntas: Junta[];
   };
 }
 
@@ -57,11 +59,6 @@ export default function SignInPage() {
       });
 
       const data = response.data;
-      console.log("data: ", data);
-      console.log('Login successful:', {
-        role: data.user.role,
-        id: data.user.id,
-      });
 
       // Store token in cookie
       Cookies.set('token', data.access_token, {
@@ -86,7 +83,11 @@ export default function SignInPage() {
       // Force a router refresh to update middleware state
       router.refresh();
 
-      console.log("data.user.role: ", data.user.role);
+      const juntaId = data.user.juntas[0].id;
+      const NumeroDeJuntas = data.user.juntas.length;
+      if (NumeroDeJuntas > 1) {
+        router.push('/404');
+      }
       // Redirect based on role
       switch (data.user.role.toLowerCase()) {
         case 'admin':
@@ -94,7 +95,7 @@ export default function SignInPage() {
           router.push('/');
           break;
         case 'user':
-          router.push(`/member?socioId=${data.user.id}`); 
+          router.push(`/member?socioId=${data.user.id}&juntaId=${juntaId}`); 
           break;
         default:
           router.push('/404');

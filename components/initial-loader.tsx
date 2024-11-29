@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { LoadingSection } from '../components/LoadingFallback';
 
 export function InitialLoader() {
@@ -25,13 +24,6 @@ export function InitialLoader() {
           title='Cargando juntas'
           message='Por favor espere mientras cargamos las juntas'
         />
-        {/* <Image
-          src='/Unica 1.jpg' //
-          alt='Loading...'
-          fill
-          style={{ objectFit: 'contain' }}
-          priority
-        /> */}
       </div>
     </div>
   );

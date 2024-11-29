@@ -63,22 +63,13 @@ const MembersSection: React.FC<MembersSectionProps> = ({ juntaId }) => {
       if (isEditing) {
         // For updates, call updateMemberMutation directly
         await updateMemberMutation.mutateAsync({
-          memberId: formData.id, // Use the ID from the form data
-          data: formData,
+          ...formData,
+          id: formData.id, // Include the ID directly in the data object
         });
       } else {
         // For creating new members, use the existing flow
-        const syntheticEvent = {
-          preventDefault: () => {},
-          target: {
-            elements: {
-              ...formData,
-            },
-          },
-        } as unknown as React.FormEvent;
-
         setNewMember(formData);
-        await handleSubmit(syntheticEvent);
+        await handleSubmit(formData);
       }
       setIsModalOpen(false);
     } catch (error) {
@@ -115,7 +106,7 @@ const MembersSection: React.FC<MembersSectionProps> = ({ juntaId }) => {
             </DialogHeader>
             <MemberForm
               key={`form-${isEditing ? 'edit' : 'create'}-${
-                isEditing ? newMember.id : 'new'
+                isEditing && newMember.id ? newMember.id : 'new'
                 }`}
               juntaId={juntaId}
               initialData={isEditing ? newMember : defaultFormValues}

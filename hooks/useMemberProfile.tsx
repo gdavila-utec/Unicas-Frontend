@@ -1,114 +1,93 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/utils/api';
+import { memberProfileSchema, type MemberProfileData } from '@/z';
+import { formatDate } from '@/utils/date';
+import { useToast } from '@/hooks/use-toast';
 
-interface Member {
-  id: string;
-  nombre: string;
-  dni: string;
-  celular: string;
-  cargo: string;
-  fecha_ingreso: string;
-  actividad_productiva: string;
-  estado: string;
-}
+export function useMemberProfile(
+  memberId: string | undefined,
+  juntaId: string
+) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-interface AccionDetalle {
-  id: string;
-  type: string;
-  amount: number;
-  shareValue: number;
-  description: string;
-  createdAt: string;
-  updatedAt: string;
-  juntaId: string;
-  memberId: string;
-  affects_capital: boolean;
-  agendaItemId: string | null;
-  capital_movements: CapitalMovement[];
-}
-
-interface CapitalMovement {
-  id: string;
-  amount: number;
-  type: string;
-  direction: string;
-  description: string;
-  createdAt: string;
-  juntaId: string;
-  prestamoId: string | null;
-  multaId: string | null;
-  accionId: string | null;
-  pagoId: string | null;
-}
-
-interface AccionesData {
-  detalle: AccionDetalle[];
-  resumen: {
-    cantidad: number;
-    valor: number;
+  const invalidateMemberQueries = () => {
+    queryClient.invalidateQueries({
+      predicate: (query) => {
+        const [resource] = query.queryKey;
+        return ['members', 'memberStats', 'member'].includes(
+          resource as string
+        );
+      },
+    });
   };
-}
 
-interface PrestamoActivo {
-  id: string;
-  monto_solicitado: number;
-  monto_adeudo: number;
-  cuotas_pendientes: number;
-  monto_proxima_cuota: number;
-  fecha_proxima_cuota: string;
-  pagos_realizados: number;
-  estado: string;
-}
-
-interface PrestamosData {
-  activos: PrestamoActivo[];
-  historial: PrestamoActivo[];
-}
-
-interface MultasData {
-  pendientes: unknown[];
-  historial: unknown[];
-}
-
-interface MemberProfileData {
-  member: Member;
-  acciones: AccionesData;
-  prestamos: PrestamosData;
-  multas: MultasData;
-}
-
-export function useMemberProfile(memberId: string | undefined) {
-  console.log('useMemberProfile   memberId: ', memberId);
   const { data, isLoading, error } = useQuery<MemberProfileData>({
-    queryKey: ['memberProfile', memberId],
+    queryKey: ['memberProfile', memberId, juntaId],
     queryFn: async () => {
-      if (!memberId) {
-        throw new Error('Member ID is required');
-      }
-      const response = await api.get(`members/${memberId}`);
-      console.log("response: ", response);
-      // if (!response.ok) {
-      //   throw new Error('Failed to fetch member profile');
-      // }
+      if (!memberId) throw new Error('Member ID is required');
+      if (!juntaId) throw new Error('Junta ID is required');
+
+      const response = await api.get(`members/${memberId}`, {
+        params: { juntaId },
+      });
       return response;
     },
-    enabled: !!memberId,
+    enabled: !!memberId && !!juntaId,
   });
 
+    const formatDateForDisplay = (date: string | null | undefined) => {
+      if (!date) return '';
+      try {
+        return formatDate(date, 'dd/MM/yyyy');
+      } catch (error) {
+        console.error('Error formatting date:', error);
+        return '';
+      }
+    };
+
+  const transformedData = data
+    ? {
+        memberInfo: {
+          ...data.member,
+          fechaNacimiento: data.member?.birth_date
+            ? formatDateForDisplay(data.member?.birth_date)
+            : '',
+          fechaIngreso: data.member.birth_date
+            ? formatDateForDisplay(data.member.birth_date)
+            : '',
+        },
+        acciones: data.acciones.resumen,
+        prestamosActivos: data.prestamos.activos,
+        prestamosHistorial: data.prestamos.historial,
+        multasPendientes: data.multas.pendientes,
+        multasHistorial: data.multas.historial,
+        accionesDetalle: data.acciones.detalle,
+      }
+    : undefined;
+
+  const updateMember = useMutation({
+    mutationFn: async (updates: Partial<MemberProfileData['member']>) => {
+      if (!memberId) throw new Error('Member ID is required');
+      const response = await api.patch(`members/${memberId}`, updates);
+      return memberProfileSchema.parse(response);
+    },
+    onSuccess: () => {
+      invalidateMemberQueries();
+      toast({
+        title: 'Éxito',
+        description: 'Miembro actualizado correctamente',
+      });
+    },
+  });
+
+
+
   return {
-    data: data
-      ? {
-          memberInfo: data.member,
-          acciones: data.acciones.resumen,
-          prestamoActivo: data.prestamos.activos[0] || null,
-          prestamosActivos: data.prestamos.activos,
-          prestamosHistorial: data.prestamos.historial,
-          multasPendientes: data.multas.pendientes,
-          multasHistorial: data.multas.historial,
-          accionesDetalle: data.acciones.detalle,
-        }
-      : undefined,
+    data: transformedData,
     isLoading,
     error,
+    updateMember,
+    formatDateForDisplay,
   };
 }

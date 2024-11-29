@@ -13,15 +13,21 @@ function LoadingFallback() {
 function MemberContent() {
   const searchParams = useSearchParams();
   const socioId = searchParams?.get('socioId');
-  console.log('socioId: ', socioId);
+  const juntaId = searchParams?.get('juntaId');
+
 
   if (!socioId) {
     return <div>No member ID provided</div>;
   }
 
+  if (!juntaId) {
+    return <div>No junta ID provided</div>;
+  }
+
   return (
     <MemberProfilePage
       memberId={Array.isArray(socioId) ? socioId[0] : socioId}
+      juntaId={juntaId}
     />
   );
 }

@@ -1,94 +1,111 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Webpack configuration for handling HTTP modules
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals.push('http', 'https');
     }
     return config;
   },
+
+  // Headers configuration for security and CORS
   async headers() {
-    return [
+    // Determine the correct origin based on environment
+    const allowedOrigin =
+      process.env.NODE_ENV === 'production'
+        ? process.env.NEXT_PUBLIC_FRONTEND_URL
+        : 'http://localhost:3000';
+
+    // Define API URL for connect-src directive
+    const apiUrl =
+      process.env.NODE_ENV === 'production'
+        ? 'https://unicas-backend-nuevaui.up.railway.app'
+        : 'http://localhost:3001';
+
+    // Base CORS headers used across all routes
+    const baseCorsHeaders = [
+      { key: 'Access-Control-Allow-Credentials', value: 'true' },
+      { key: 'Access-Control-Allow-Origin', value: allowedOrigin },
       {
-        // Base configuration for all routes
+        key: 'Access-Control-Allow-Headers',
+        value: [
+          'Authorization',
+          'X-CSRF-Token',
+          'X-Requested-With',
+          'Accept',
+          'Accept-Version',
+          'Content-Length',
+          'Content-MD5',
+          'Content-Type',
+          'Date',
+          'X-Api-Version',
+        ].join(','),
+      },
+    ];
+
+    // Security headers including enhanced CSP
+    const securityHeaders = [
+      { key: 'X-Frame-Options', value: 'DENY' },
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
+      {
+        key: 'Content-Security-Policy',
+        value: [
+          "default-src 'self'",
+          "img-src 'self' data: https:",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+          "style-src 'self' 'unsafe-inline'",
+          `connect-src 'self' ${apiUrl} ${allowedOrigin}`,
+          "font-src 'self' data:",
+          "frame-src 'self'",
+          "media-src 'self'",
+          "object-src 'none'",
+          "base-uri 'self'",
+        ].join('; '),
+      },
+    ];
+
+    return [
+      // Base configuration for all routes
+      {
         source: '/:path*',
         headers: [
-          // CORS headers
-          { key: 'Access-Control-Allow-Credentials', value: 'true' },
-          {
-            key: 'Access-Control-Allow-Origin',
-            value:
-              process.env.NEXT_PUBLIC_API_URL ||
-              'https://unicas-nest-backend-production.up.railway.app',
-          },
+          ...baseCorsHeaders,
+          ...securityHeaders,
           {
             key: 'Access-Control-Allow-Methods',
             value: 'GET,DELETE,PATCH,POST,PUT,OPTIONS',
           },
-          {
-            key: 'Access-Control-Allow-Headers',
-            value:
-              'Authorization,X-CSRF-Token,X-Requested-With,Accept,Accept-Version,Content-Length,Content-MD5,Content-Type,Date,X-Api-Version',
-          },
-          // Security headers
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
-          },
         ],
       },
+      // Authentication endpoints configuration
       {
-        // Special configuration for auth endpoints
         source: '/auth/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Credentials', value: 'true' },
-          {
-            key: 'Access-Control-Allow-Origin',
-            value:
-              process.env.NEXT_PUBLIC_API_URL ||
-              'https://unicas-nest-backend-production.up.railway.app',
-          },
+          ...baseCorsHeaders,
           {
             key: 'Access-Control-Allow-Methods',
             value: 'GET,POST,OPTIONS',
           },
           {
-            key: 'Access-Control-Allow-Headers',
-            value:
-              'Authorization,X-CSRF-Token,X-Requested-With,Accept,Accept-Version,Content-Length,Content-MD5,Content-Type,Date,X-Api-Version',
-          },
-          {
             key: 'Access-Control-Max-Age',
-            value: '86400',
+            value: '86400', // Cache preflight requests for 24 hours
+          },
+          // Additional security headers specific to auth routes
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
           },
         ],
       },
+      // API routes configuration
       {
-        // Handle preflight requests for all API routes
         source: '/api/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Credentials', value: 'true' },
-          {
-            key: 'Access-Control-Allow-Origin',
-            value:
-              process.env.NEXT_PUBLIC_API_URL ||
-              'https://unicas-nest-backend-production.up.railway.app',
-          },
+          ...baseCorsHeaders,
           {
             key: 'Access-Control-Allow-Methods',
             value: 'GET,DELETE,PATCH,POST,PUT,OPTIONS',
-          },
-          {
-            key: 'Access-Control-Allow-Headers',
-            value:
-              'Authorization,X-CSRF-Token,X-Requested-With,Accept,Accept-Version,Content-Length,Content-MD5,Content-Type,Date,X-Api-Version',
           },
           {
             key: 'Access-Control-Max-Age',

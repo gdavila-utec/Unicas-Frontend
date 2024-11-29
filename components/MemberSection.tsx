@@ -21,7 +21,7 @@ interface MemberSectionProps {
 const MemberSection: React.FC<MemberSectionProps> = ({memberId, juntaId }) => {
   const router = useRouter();
   const { memberDetail, summary, members, prestamos, isLoading } =
-    useMemberSection(memberId, juntaId);
+  useMemberSection(memberId, juntaId);
 
   if (isLoading || !memberDetail) {
     return (

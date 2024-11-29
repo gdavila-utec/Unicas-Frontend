@@ -1,4 +1,3 @@
-// PagosSection.tsx
 import React, { useEffect } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
@@ -35,6 +34,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { usePagos } from '@/hooks/usePagosSections';
+import EnhancedInput from '@/components/ui/enhanced-input-amount';
 
 interface PagosSectionProps {
   juntaId: string;
@@ -53,12 +53,12 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
     handleDeletePago,
     onSubmit,
   } = usePagos(juntaId);
-
+  
+  console.log("loans: ", loans);
   useEffect(() => {
     refetchLoanStatus();
   }, [refetchLoanStatus]);
 
-  // Auto-fill payment fields when loan status updates
   useEffect(() => {
     if ((loanStatusUpdatePrincipal?.remainingPayments ?? []).length > 0) {
       const nextPayment = loanStatusUpdatePrincipal?.remainingPayments?.[0] ?? {
@@ -70,13 +70,21 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
     }
   }, [loanStatusUpdatePrincipal, form]);
 
-  // Calculate summary values
+  const getSelectedLoanType = () => {
+    const selectedLoanId = form.watch('loan');
+    const selectedLoan = loans.find((loan) => loan.id === selectedLoanId);
+    return selectedLoan?.loan_type;
+  };
+
+  const isCuotaVariable = getSelectedLoanType() === 'CUOTA_VARIABLE';
+
   const getNextPaymentAmount = () => {
     if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 0;
     return loanStatusUpdatePrincipal.remainingPayments[0]?.expected_amount || 0;
   };
 
   const getNextPaymentPrincipal = () => {
+    if (isCuotaVariable) return 0;
     if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 0;
     return loanStatusUpdatePrincipal.remainingPayments[0]?.principal || 0;
   };
@@ -99,7 +107,6 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
     );
   };
 
-  // Prevent form submission on Enter key
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -122,8 +129,6 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
 
   return (
     <div className='space-y-8'>
- 
-
       <div className='bg-white p-6 rounded-lg shadow'>
         <h2 className='text-xl font-bold mb-6'>Registrar Pago de Préstamo</h2>
 
@@ -133,7 +138,6 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
             onKeyDown={handleKeyDown}
             className='space-y-6'
           >
-            {/* Member and Date Selection */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
               <FormField
                 control={form.control}
@@ -201,7 +205,6 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
               />
             </div>
 
-            {/* Loan Selection and Different Payment Option */}
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
               <div className='space-y-4'>
                 <FormField
@@ -234,23 +237,25 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name='different_payment'
-                  render={({ field }) => (
-                    <FormItem className='flex flex-row items-start space-x-3 space-y-0 rounded-md'>
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className='space-y-1 leading-none'>
-                        <FormLabel>Pago Diferente</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
+                {!isCuotaVariable && (
+                  <FormField
+                    control={form.control}
+                    name='different_payment'
+                    render={({ field }) => (
+                      <FormItem className='flex flex-row items-start space-x-3 space-y-0 rounded-md'>
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className='space-y-1 leading-none'>
+                          <FormLabel>Pago Diferente</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
               <FormField
@@ -259,19 +264,20 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Cuota pago de capital</FormLabel>
-
                     <FormControl>
-                      <InputAmount
-                        type='number'
-                        {...field}
-                        value={
-                          field.value.toFixed(2) || getNextPaymentPrincipal()
-                        }
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                        disabled={!form.watch('different_payment')}
-                        className={
-                          !form.watch('different_payment') ? 'bg-gray-100' : ''
-                        }
+                      <EnhancedInput
+                      type='number'
+                      {...field}
+                      value={0 || getNextPaymentPrincipal()}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(Number(e.target.value))}
+                      disabled={
+                        !isCuotaVariable && !form.watch('different_payment')
+                      }
+                      className={
+                        !isCuotaVariable && !form.watch('different_payment')
+                        ? 'bg-gray-100'
+                        : ''
+                      }
                       />
                     </FormControl>
                   </FormItem>
@@ -298,7 +304,6 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
               />
             </div>
 
-            {/* Summary Boxes */}
             {loanStatusUpdatePrincipal && (
               <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                 <Card className='p-4'>
@@ -347,7 +352,6 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
           </form>
         </Form>
 
-        {/* Payment History Table */}
         <div className='mt-8'>
           <h2 className='text-xl font-bold mb-4'>Historial de Pagos</h2>
           <Table>

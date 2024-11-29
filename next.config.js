@@ -25,7 +25,8 @@ const nextConfig = {
     // Base CORS headers used across all routes
     const baseCorsHeaders = [
       { key: 'Access-Control-Allow-Credentials', value: 'true' },
-      { key: 'Access-Control-Allow-Origin', value: allowedOrigin },
+      // { key: 'Access-Control-Allow-Origin', value: allowedOrigin },
+      { key: 'Access-Control-Allow-Origin', value: '*' }, // Add this value
       {
         key: 'Access-Control-Allow-Headers',
         value: [

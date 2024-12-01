@@ -95,7 +95,8 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/sign-up') ||
     pathname === '/' ||
     pathname.startsWith('/auth/') ||
-    pathname.includes('/auth/')
+    pathname.includes('/auth/') ||
+    pathname === '/api/health'
   ) {
     return corsResponse(NextResponse.next());
   }
@@ -217,6 +218,6 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Match all paths except Next.js internal routes
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!api/health|_next/static|_next/image|favicon.ico).*)',
   ],
 };

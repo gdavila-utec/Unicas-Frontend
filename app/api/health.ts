@@ -1,9 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 
-interface HealthResponse {
-  status: string;
-}
+interface HealthRequest extends NextApiRequest {}
 
-export default function handler(req: NextApiRequest, res: NextApiResponse<HealthResponse>) {
+export default function handler(req: HealthRequest, res: NextApiResponse) {
+  // Disable any authentication middleware for this route
+  res.setHeader('Cache-Control', 'no-store');
   res.status(200).json({ status: 'healthy' });
 }

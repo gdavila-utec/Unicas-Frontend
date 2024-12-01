@@ -1,0 +1,8 @@
+#### check backend health endpoint
+
+GET http://localhost:3000/api/health
+
+
+#### check frontend health endpoint
+
+GET http://localhost:3001/api/health

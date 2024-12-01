@@ -9,7 +9,7 @@
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
     "startCommand": "yarn start",
-    "healthcheckPath": "/api/health",
+    "healthcheckPath": "https://unicas-nest-backend-nuevaui.up.railway.app/api/health",
     "healthcheckTimeout": 300,
     "numReplicas": 1
   }

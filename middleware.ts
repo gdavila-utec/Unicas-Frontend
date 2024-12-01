@@ -96,7 +96,7 @@ export function middleware(request: NextRequest) {
     pathname === '/' ||
     pathname.startsWith('/auth/') ||
     pathname.includes('/auth/') ||
-    pathname === '/api/health'
+    pathname === '/health.txt'
   ) {
     return corsResponse(NextResponse.next());
   }

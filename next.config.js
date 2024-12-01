@@ -56,7 +56,7 @@ const nextConfig = {
           "img-src 'self' data: https:",
           "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
           "style-src 'self' 'unsafe-inline'",
-          `connect-src 'self' ${apiUrl} ${allowedOrigin}`,
+          `connect-src 'self' ${apiUrl} ${allowedOrigin} https://*.railway.app`,
           "font-src 'self' data:",
           "frame-src 'self'",
           "media-src 'self'",
@@ -67,7 +67,14 @@ const nextConfig = {
     ];
 
     return [
-      // Base configuration for all routes
+      {
+        source: '/health.txt',
+        headers: [
+          { key: 'Content-Type', value: 'text/plain' },
+          { key: 'Cache-Control', value: 'no-store' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+        ],
+      },
       {
         source: '/:path*',
         headers: [

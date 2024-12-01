@@ -20,7 +20,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN yarn build
 
 # Expose port
-EXPOSE 3000
+EXPOSE 3001
 
 # Start the app
 CMD ["yarn", "start"]

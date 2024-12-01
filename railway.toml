@@ -19,7 +19,7 @@ NODE_ENV = "production"
 [[services]]
 name = "web"
 protocol = "http"
-port = "3000"
+port = "3001"
 
 [[services.environment]]
 key = "NEXT_PUBLIC_API_URL"

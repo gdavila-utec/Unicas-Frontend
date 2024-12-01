@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build --no-lint",
-    "start": "next start -p 3001",
+"start": "next start -p ${PORT:-3001}",
     "test:metrics": "ANALYZE=true next build && next start -p 3001",
     "lint": "next lint"
   },

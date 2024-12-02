@@ -4,6 +4,7 @@ import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { InputAmount } from '@/components/ui/input-amount';
+import InputEnhanced  from '@/components/ui/enhanced-input-amount';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -265,25 +266,29 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                   <FormItem>
                     <FormLabel>Cuota pago de capital</FormLabel>
                     <FormControl>
-                      <EnhancedInput
-                      type='number'
-                      {...field}
-                      value={0 || getNextPaymentPrincipal()}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(Number(e.target.value))}
-                      disabled={
-                        !isCuotaVariable && !form.watch('different_payment')
-                      }
-                      className={
-                        !isCuotaVariable && !form.watch('different_payment')
-                        ? 'bg-gray-100'
-                        : ''
-                      }
+                      <InputEnhanced
+                        {...field}
+                        value={
+                          field.value || getNextPaymentPrincipal().toFixed(2)
+                        }
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          field.onChange(Number(e.target.value))
+                        }
+                        disabled={
+                          !isCuotaVariable && !form.watch('different_payment')
+                        }
+                        isDifferentPayment={form.watch('different_payment')}
+                        isCuotaVariable={isCuotaVariable}
+                        className={
+                          !isCuotaVariable && !form.watch('different_payment')
+                            ? 'bg-gray-100'
+                            : ''
+                        }
                       />
                     </FormControl>
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name='interest_payment'

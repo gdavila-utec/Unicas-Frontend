@@ -2,60 +2,94 @@ import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
-const InputAmount = React.forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->((props, ref) => {
-  const { value, onChange, className, ...rest } = props;
-  const [isFocused, setIsFocused] = useState(false);
+interface InputAmountProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  isDifferentPayment?: boolean;
+  isCuotaVariable?: boolean;
+}
 
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    setIsFocused(true);
-    // Clear the value if it's 0
-    if (value === 0 || value === '0') {
-      const syntheticEvent = {
-        ...e,
-        target: {
-          ...e.target,
-          value: '',
-        },
-      };
-      onChange?.(syntheticEvent as React.ChangeEvent<HTMLInputElement>);
-    }
-    props.onFocus?.(e);
-  };
+const InputAmount = React.forwardRef<HTMLInputElement, InputAmountProps>(
+  (
+    {
+      value,
+      onChange,
+      className,
+      disabled,
+      isDifferentPayment,
+      isCuotaVariable,
+      ...rest
+    },
+    ref
+  ) => {
+    const [isFocused, setIsFocused] = useState(false);
+    const [localValue, setLocalValue] = useState(value);
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    setIsFocused(false);
-    // If the field is empty, set it back to 0
-    if (!e.target.value) {
-      const syntheticEvent = {
-        ...e,
-        target: {
-          ...e.target,
-          value: '0',
-        },
-      };
-      onChange?.(syntheticEvent as React.ChangeEvent<HTMLInputElement>);
-    }
-    props.onBlur?.(e);
-  };
+    // Check if input should be editable
+    const isEditable = isDifferentPayment || isCuotaVariable;
 
-  return (
-    <Input
-      {...rest}
-      ref={ref}
-      value={isFocused && value === 0 ? '' : value}
-      onChange={onChange}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      className={cn(className)}
-      style={{ appearance: 'textfield' }}
-      inputMode='numeric'
-      pattern='[0-9]*'
-    />
-  );
-});
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+      setIsFocused(true);
+      if (isEditable) {
+        setLocalValue('');
+        const syntheticEvent = {
+          ...e,
+          target: {
+            ...e.target,
+            value: '',
+          },
+        };
+        onChange?.(syntheticEvent as React.ChangeEvent<HTMLInputElement>);
+      }
+      rest.onFocus?.(e);
+    };
+
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      setIsFocused(false);
+      if (!e.target.value) {
+        const syntheticEvent = {
+          ...e,
+          target: {
+            ...e.target,
+            value: '0',
+          },
+        };
+        onChange?.(syntheticEvent as React.ChangeEvent<HTMLInputElement>);
+        setLocalValue('0');
+      }
+      rest.onBlur?.(e);
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+
+      if (newValue === '') {
+        setLocalValue('');
+        onChange?.(e);
+        return;
+      }
+
+      const regex = /^\d*\.?\d{0,2}$/;
+      if (regex.test(newValue)) {
+        setLocalValue(newValue);
+        onChange?.(e);
+      }
+    };
+
+    return (
+      <Input
+        {...rest}
+        ref={ref}
+        value={isFocused && isEditable ? localValue : value}
+        onChange={handleChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        className={cn(className)}
+        style={{ appearance: 'textfield' }}
+        inputMode='decimal'
+        disabled={disabled}
+      />
+    );
+  }
+);
 
 InputAmount.displayName = 'InputAmount';
 

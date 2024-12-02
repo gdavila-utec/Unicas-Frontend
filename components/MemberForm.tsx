@@ -53,6 +53,18 @@ const MemberForm = memo(
       setIsSuccess,
     });
 
+    const formatDateForDisplay = (dateString: string) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      console.log("date: ", date);
+      const newDate = date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+      return newDate
+    };
+
     
     const formContainerClassName = clsx(
       // These classes provide the base styling and ensure smooth transitions
@@ -109,6 +121,7 @@ const MemberForm = memo(
                   control={control}
                   render={({ field }) => (
                     <Select
+                      defaultValue='DNI'
                       value={field.value}
                       onValueChange={field.onChange}
                     >
@@ -159,6 +172,7 @@ const MemberForm = memo(
                   control={control}
                   render={({ field }) => (
                     <Select
+                      defaultValue='socio'
                       value={field.value}
                       onValueChange={field.onChange}
                     >
@@ -220,6 +234,8 @@ const MemberForm = memo(
                       type='date'
                       {...field}
                       value={formatDateForInput(field.value)}
+                      data-placeholder='dd/mm/yyyy'
+                      placeholder='dd/mm/yyyy'
                       className={errors.birth_date ? 'border-red-500' : ''}
                     />
                   )}
@@ -281,6 +297,8 @@ const MemberForm = memo(
                     <Input
                       type='date'
                       {...field}
+                      data-placeholder='dd/mm/yyyy'
+                      placeholder='dd/mm/yyyy'
                       value={formatDateForInput(field.value)}
                       className={errors.join_date ? 'border-red-500' : ''}
                     />
@@ -312,7 +330,6 @@ const MemberForm = memo(
                       <SelectContent>
                         <SelectItem value='Masculino'>Masculino</SelectItem>
                         <SelectItem value='Femenino'>Femenino</SelectItem>
-
                       </SelectContent>
                     </Select>
                   )}

@@ -31,13 +31,15 @@ export function MemberProfileCard({
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const { id: juntaId } = useParams();
   const juntaIdString = Array.isArray(juntaId) ? juntaId[0] : juntaId;
-
+  
   // Transform member data for form
   const formattedMemberData = React.useMemo(
     () => transformMemberToFormData(memberInfo),
     [memberInfo]
   );
-
+  console.log('MemberProfileCard memberInfo: ', memberInfo);
+  
+  console.log("formattedMemberData: ", formattedMemberData);
   const handleFormSubmit = async (formData: EditMemberForm) => {
     try {
       await onUpdate(formData);

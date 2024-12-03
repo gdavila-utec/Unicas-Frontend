@@ -14,7 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePrestamoDetails } from '@/hooks/usePrestamoDetails';
-import Link from 'next/link';
 
 interface PrestamoDetailsProps {
   id: string;
@@ -23,7 +22,6 @@ interface PrestamoDetailsProps {
 export default function PrestamoDetails({ id }: PrestamoDetailsProps) {
   const {
     prestamo,
-    loanStatus,
     juntaId, // Now available from the hook
     isLoading,
     error,
@@ -33,6 +31,7 @@ export default function PrestamoDetails({ id }: PrestamoDetailsProps) {
     formatDate,
     exportToPDF,
   } = usePrestamoDetails(id);
+  console.log("prestamo: ", prestamo);
   
   useEffect(() => {
     if (juntaId) {
@@ -187,7 +186,7 @@ export default function PrestamoDetails({ id }: PrestamoDetailsProps) {
                       {formatMoney(schedule.expected_amount)}
                     </TableCell>
                     <TableCell>
-                      {formatMoney(prestamo.amount - schedule.expected_amount)}
+                      {formatMoney(schedule.remaining_balance)}
                     </TableCell>
                   </TableRow>
                 ))}

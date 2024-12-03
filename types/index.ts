@@ -615,6 +615,8 @@
     id: string;
     due_date: string;
     expected_amount: number;
+    paid_amount: number;
+    remaining_balance: number;
     principal: number;
     interest: number;
     installment_number: number;
@@ -638,8 +640,11 @@
     id: string;
     due_date: Date;
     expected_amount: number;
+    paid_amount: number;
+    remaining_balance: number;
     principal: number;
     interest: number;
+    loanAmount: number;
     installment_number: number;
     status: string;
     createdAt: Date;

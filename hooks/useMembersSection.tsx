@@ -271,7 +271,7 @@ export const useMembersSection = (juntaId: string) => {
 
   const deleteMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
-      return api.delete(`members/${memberId}`);
+      return api.delete(`members/${juntaId}/${memberId}`);
     },
     onMutate: async (memberId) => {
       await queryClient.cancelQueries({ queryKey: ['members', juntaId] });

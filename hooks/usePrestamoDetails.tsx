@@ -78,8 +78,8 @@ export const usePrestamoDetails = (id: string): UsePrestamoDetailsResult => {
 
   const {
     data: loanStatus,
-    isLoading: isLoadingLoanStatus,
-    error: loanStatusError,
+    // isLoading: isLoadingLoanStatus,
+    // error: loanStatusError,
   } = useQuery<LoanStatus>({
     queryKey: ['loan-status', id],
     queryFn: async () => {
@@ -162,7 +162,7 @@ export const usePrestamoDetails = (id: string): UsePrestamoDetailsResult => {
       formatMoney(schedule.interest),
       formatMoney(schedule.principal),
       formatMoney(schedule.expected_amount),
-      formatMoney(loanStatus?.remainingAmount ?? 0),
+      formatMoney(schedule.remaining_balance),
       schedule.status === 'PAID' ? 'Pagado' : 'Pendiente',
     ]);
 

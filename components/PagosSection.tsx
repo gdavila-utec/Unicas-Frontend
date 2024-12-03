@@ -56,6 +56,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
   } = usePagos(juntaId);
   
   console.log("loans: ", loans);
+  console.log('paid loans: ', loans.filter(loan=>loan.status === 'PAID'));
   useEffect(() => {
     refetchLoanStatus();
   }, [refetchLoanStatus]);
@@ -101,11 +102,9 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
   };
 
   const getTotalRemainingAmount = () => {
+    console.log("loanStatusUpdatePrincipal.remainingPayments: ", loanStatusUpdatePrincipal?.remainingPayments);
     if (!loanStatusUpdatePrincipal?.remainingPayments) return 0;
-    return loanStatusUpdatePrincipal.remainingPayments.reduce(
-      (sum, payment) => sum + payment.expected_amount,
-      0
-    );
+    return loanStatusUpdatePrincipal?.remainingPayments[0]?.remaining_balance || 0;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -224,7 +223,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {loans.map((loan) => (
+                          {loans.filter(loan=>loan.status !== 'PAID').map((loan) => (
                             <SelectItem
                               key={loan.id}
                               value={loan.id}

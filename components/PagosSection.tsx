@@ -82,7 +82,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
 
   const getNextPaymentAmount = () => {
     if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 0;
-    return loanStatusUpdatePrincipal.remainingPayments[0]?.expected_amount || 0;
+    return loanStatusUpdatePrincipal.remainingPayments[1]?.expected_amount || 0;
   };
 
   const getNextPaymentPrincipal = () => {

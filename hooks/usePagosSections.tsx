@@ -28,6 +28,7 @@ export const usePagos = (juntaId: string) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [selectedPrestamoId, setSelectedPrestamoId] = useState<string>('');
+  console.log("selectedPrestamoId: ", selectedPrestamoId);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),

@@ -435,9 +435,9 @@
   export interface LoanFormData {
     memberId: string;
     requestDate: string;
-    amount: number;
+    amount: string;
     monthlyInterest: number;
-    installments: number;
+    installments: string;
     paymentType: string;
     reason: string;
     guaranteeType: GuaranteeType;

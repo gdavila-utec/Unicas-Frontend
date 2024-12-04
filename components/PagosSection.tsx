@@ -4,7 +4,6 @@ import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { InputAmount } from '@/components/ui/input-amount';
-import InputEnhanced  from '@/components/ui/enhanced-input-amount';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -35,7 +34,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { usePagos } from '@/hooks/usePagosSections';
-import EnhancedInput from '@/components/ui/enhanced-input-amount';
+import EnhancedInputAmount from '@/components/ui/enhanced-input-amount';
 
 interface PagosSectionProps {
   juntaId: string;
@@ -55,8 +54,6 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
     onSubmit,
   } = usePagos(juntaId);
   
-  console.log("loans: ", loans);
-  console.log('paid loans: ', loans.filter(loan=>loan.status === 'PAID'));
   useEffect(() => {
     refetchLoanStatus();
   }, [refetchLoanStatus]);
@@ -223,14 +220,16 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {loans.filter(loan=>loan.status !== 'PAID').map((loan) => (
-                            <SelectItem
-                              key={loan.id}
-                              value={loan.id}
-                            >
-                              {`${loan.loan_type} - ${loan.amount} soles - ${loan.number_of_installments} cuotas`}
-                            </SelectItem>
-                          ))}
+                          {loans
+                            .filter((loan) => loan.status === 'PAID')
+                            .map((loan) => (
+                              <SelectItem
+                                key={loan.id}
+                                value={loan.id}
+                              >
+                                {`${loan.loan_type} - ${loan.amount} soles - ${loan.number_of_installments} cuotas`}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </FormItem>
@@ -265,7 +264,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                   <FormItem>
                     <FormLabel>Cuota pago de capital</FormLabel>
                     <FormControl>
-                      <InputEnhanced
+                      <EnhancedInputAmount
                         {...field}
                         value={
                           field.value || getNextPaymentPrincipal().toFixed(2)

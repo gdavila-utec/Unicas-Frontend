@@ -22,9 +22,9 @@ export const usePrestamos = (juntaId: string) => {
   const initialFormData: LoanFormData = {
     memberId: '',
     requestDate: new Date().toISOString().split('T')[0],
-    amount: 0,
+    amount: '',
     monthlyInterest: monthlyInterestRate,
-    installments: 0,
+    installments: '',
     paymentType: '',
     reason: '',
     guaranteeType: 'AVAL',
@@ -125,7 +125,7 @@ export const usePrestamos = (juntaId: string) => {
         request_date: data.requestDate,
         amount: data.amount.toString(),
         monthly_interest: data.monthlyInterest.toString(),
-        number_of_installments: data.installments,
+        number_of_installments: Number(data.installments),
         loan_type: data.paymentType,
         reason: data.reason,
         guarantee_type: data.guaranteeType,
@@ -182,17 +182,16 @@ export const usePrestamos = (juntaId: string) => {
     }));
   };
 
-  const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value, type } = e.target;
-    updateFormData({
-      [name]: type === 'number' ? parseFloat(value) || 0 : value,
-    });
-  };
-
+const handleInputChange = (
+  e: React.ChangeEvent<
+    HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+  >
+) => {
+  const { name, value } = e.target;
+  updateFormData({ [name]: value });
+};
+  
+  
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     await createLoanMutation.mutateAsync(formData);
@@ -236,7 +235,7 @@ export const usePrestamos = (juntaId: string) => {
   };
 
   const memberValidation = formData.memberId
-    ? calculateLoanValidation(formData.memberId, formData.amount)
+    ? calculateLoanValidation(formData.memberId, Number(formData.amount))
     : { exceedsLimit: false, totalDebt: 0, accionesValue: 0 };
 
   const isLoading =

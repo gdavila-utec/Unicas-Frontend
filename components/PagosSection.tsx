@@ -221,7 +221,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                         </FormControl>
                         <SelectContent>
                           {loans
-                            .filter((loan) => loan.status === 'PAID')
+                            .filter((loan) => loan.status !== 'PAID')
                             .map((loan) => (
                               <SelectItem
                                 key={loan.id}

@@ -57,7 +57,9 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
   useEffect(() => {
     refetchLoanStatus();
   }, [refetchLoanStatus]);
-
+  
+  console.log("loans: ", loans);
+  console.log("paymentHistory: ", paymentHistory);
   useEffect(() => {
     if ((loanStatusUpdatePrincipal?.remainingPayments ?? []).length > 0) {
       const nextPayment = loanStatusUpdatePrincipal?.remainingPayments?.[0] ?? {
@@ -68,7 +70,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
       form.setValue('interest_payment', nextPayment?.interest);
     }
   }, [loanStatusUpdatePrincipal, form]);
-
+  
   const getSelectedLoanType = () => {
     const selectedLoanId = form.watch('loan');
     const selectedLoan = loans.find((loan) => loan.id === selectedLoanId);

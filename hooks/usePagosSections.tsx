@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,7 +6,7 @@ import * as z from 'zod';
 import { api } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
 import type {
-  Payment,
+  // Payment,
   PaymentHistory,
   LoanStatus,
   Prestamo,
@@ -22,13 +22,20 @@ const formSchema = z.object({
   different_payment: z.boolean().default(false),
 });
 
+const QUERY_KEYS = {
+  loans: (juntaId: string) => ['loans', juntaId],
+  payments: (juntaId: string) => ['payment-history', juntaId],
+  loanStatus: (loanId: string) => ['loan-status', loanId],
+  junta: (juntaId: string) => ['junta', juntaId],
+} as const;
+
 type FormData = z.infer<typeof formSchema>;
 
 export const usePagos = (juntaId: string) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [selectedPrestamoId, setSelectedPrestamoId] = useState<string>('');
-  console.log("selectedPrestamoId: ", selectedPrestamoId);
+  // console.log("selectedPrestamoId: ", selectedPrestamoId);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -42,6 +49,22 @@ export const usePagos = (juntaId: string) => {
     },
   });
 
+  useEffect(() => {
+    const fetchUpdates = async () => {
+      await api.get(`/junta/${juntaId}/updates`);
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.loans(juntaId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.payments(juntaId),
+      });
+    };
+
+    const intervalId = setInterval(fetchUpdates, 30000); // Fetch updates every 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, [juntaId, queryClient]);
+
   const { data: members = [], isLoading: isLoadingMembers } = useQuery<
     Member[]
   >({
@@ -52,25 +75,27 @@ export const usePagos = (juntaId: string) => {
     },
   });
 
-  const { data: loans = [], isLoading: isLoadingLoans } = useQuery<Prestamo[]>({
-    queryKey: ['loans', juntaId],
-    queryFn: async () => {
-      const response = await api.get(`/prestamos/junta/${juntaId}`);
-      return response;
-    },
-    staleTime: 0,
-  });
+const { data: loans = [], isLoading: isLoadingLoans } = useQuery<Prestamo[]>({
+  queryKey: QUERY_KEYS.loans(juntaId),
+  queryFn: async () => {
+    const response = await api.get(`/prestamos/junta/${juntaId}`);
+    return response;
+  },
+  staleTime: 0,
+  refetchInterval: 30000, // Refetch every 30 seconds
+});
 
-  const { data: paymentHistory = [], isLoading: isLoadingHistory } = useQuery<
-    PaymentHistory[]
-  >({
-    queryKey: ['payment-history', juntaId],
-    queryFn: async () => {
-      const response = await api.get(`junta-payments/${juntaId}/history`);
-      return response;
-    },
-    staleTime: 0,
-  });
+const { data: paymentHistory = [], isLoading: isLoadingHistory } = useQuery<
+  PaymentHistory[]
+>({
+  queryKey: QUERY_KEYS.payments(juntaId),
+  queryFn: async () => {
+    const response = await api.get(`junta-payments/${juntaId}/history`);
+    return response;
+  },
+  staleTime: 0,
+  refetchInterval: 30000,
+});
 
   const {
     data: loanStatusUpdatePrincipal,
@@ -92,7 +117,7 @@ export const usePagos = (juntaId: string) => {
     mutationFn: async (values: FormData) => {
       const amount = values.capital_payment + values.interest_payment;
       return api.post(`prestamos/${selectedPrestamoId}/pagos`, {
-        amount: amount,
+        amount,
         principal_paid: values.capital_payment,
         interest_paid: values.interest_payment,
         date: values.date,
@@ -100,21 +125,31 @@ export const usePagos = (juntaId: string) => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payment-history', juntaId] });
-      queryClient.invalidateQueries({ queryKey: ['junta', juntaId] });
+      // Invalidate all related queries atomically
       queryClient.invalidateQueries({
-        queryKey: ['loan-status', selectedPrestamoId],
+        queryKey: QUERY_KEYS.payments(juntaId),
       });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.loans(juntaId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.loanStatus(selectedPrestamoId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.junta(juntaId),
+      });
+
       toast({
         title: 'Pago registrado',
         description: 'El pago se ha registrado exitosamente.',
       });
       form.reset();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Error',
-        description: error?.message || 'Error al registrar el pago',
+        description:
+          (error as Error)?.message || 'Error al registrar el pago',
         variant: 'destructive',
       });
     },
@@ -133,10 +168,10 @@ export const usePagos = (juntaId: string) => {
         description: 'El pago se ha eliminado exitosamente.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Error',
-        description: error?.message || 'Error al eliminar el pago',
+        description: (error as Error)?.message || 'Error al eliminar el pago',
         variant: 'destructive',
       });
     },

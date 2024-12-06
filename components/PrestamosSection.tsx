@@ -1,7 +1,7 @@
 // components/PrestamosSection.tsx
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -497,7 +497,7 @@ const PrestamosSection: React.FC<PrestamosSectionProps> = ({ juntaId }) => {
                             )
                           }
                         >
-                          <Pencil className='h-4 w-4' />
+                          <Eye className='h-4 w-4' />
                         </Button>
                         <Button
                           variant='ghost'

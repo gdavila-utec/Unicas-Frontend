@@ -35,7 +35,7 @@ export const usePagos = (juntaId: string) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [selectedPrestamoId, setSelectedPrestamoId] = useState<string>('');
-  // console.log("selectedPrestamoId: ", selectedPrestamoId);
+
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -116,6 +116,8 @@ const { data: paymentHistory = [], isLoading: isLoadingHistory } = useQuery<
   const createPaymentMutation = useMutation({
     mutationFn: async (values: FormData) => {
       const amount = values.capital_payment + values.interest_payment;
+      console.log(" values.interest_payment: ",  values.interest_payment);
+      console.log("values.capital_payment: ", values.capital_payment);
       return api.post(`prestamos/${selectedPrestamoId}/pagos`, {
         amount,
         principal_paid: values.capital_payment,

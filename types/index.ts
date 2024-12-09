@@ -629,6 +629,7 @@
 
   export interface LoanStatus {
     totalPaid: number;
+    loanAmount: number;
     remainingAmount: number;
     remainingPayments: Payment[];
     nextPaymentDue: Payment;

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { use, useEffect } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -60,51 +60,67 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
   
   console.log("loans: ", loans);
   console.log("paymentHistory: ", paymentHistory);
+    const getSelectedLoanType = () => {
+      const selectedLoanId = form.watch('loan');
+      const selectedLoan = loans.find((loan) => loan.id === selectedLoanId);
+      return selectedLoan?.loan_type;
+    };
+
+    const isCuotaVariable = getSelectedLoanType() === 'CUOTA_VARIABLE';
+   const getNextPaymentPrincipal = () => {
+     if (isCuotaVariable) return 0;
+     if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 0;
+     if (loanStatusUpdatePrincipal.remainingPayments[0]?.status === 'PARTIAL') {
+       return (
+         loanStatusUpdatePrincipal.remainingPayments[0]?.expected_amount -
+           loanStatusUpdatePrincipal.remainingPayments[0]?.paid_amount || 0
+       );
+     }
+     return loanStatusUpdatePrincipal.remainingPayments[0]?.principal || 0;
+   };
+  const nextPaymentPrincipal = getNextPaymentPrincipal()
+
   useEffect(() => {
     if ((loanStatusUpdatePrincipal?.remainingPayments ?? []).length > 0) {
       const nextPayment = loanStatusUpdatePrincipal?.remainingPayments?.[0] ?? {
         principal: 0,
         interest: 0,
       };
+
       form.setValue('capital_payment', nextPayment?.principal);
       form.setValue('interest_payment', nextPayment?.interest);
     }
-  }, [loanStatusUpdatePrincipal, form]);
-  
-  const getSelectedLoanType = () => {
-    const selectedLoanId = form.watch('loan');
-    const selectedLoan = loans.find((loan) => loan.id === selectedLoanId);
-    return selectedLoan?.loan_type;
-  };
+    form.setValue('capital_payment', nextPaymentPrincipal);
+  }, [loanStatusUpdatePrincipal, form, nextPaymentPrincipal]);
 
-  const isCuotaVariable = getSelectedLoanType() === 'CUOTA_VARIABLE';
+
+  
+
 
   const getNextPaymentAmount = () => {
     if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 0;
     return loanStatusUpdatePrincipal.remainingPayments[1]?.expected_amount || 0;
   };
+  
 
-  const getNextPaymentPrincipal = () => {
-    if (isCuotaVariable) return 0;
-    if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 0;
-    return loanStatusUpdatePrincipal.remainingPayments[0]?.principal || 0;
-  };
-
+  
   const getNextPaymentInterest = () => {
     if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 0;
+
     return loanStatusUpdatePrincipal.remainingPayments[0]?.interest || 0;
   };
-
+  
   const getRemainingInstallments = () => {
     if (!loanStatusUpdatePrincipal?.remainingPayments) return 0;
     return loanStatusUpdatePrincipal.remainingPayments.length;
   };
 
   const getTotalRemainingAmount = () => {
-    console.log("loanStatusUpdatePrincipal.remainingPayments: ", loanStatusUpdatePrincipal?.remainingPayments);
     if (!loanStatusUpdatePrincipal?.remainingPayments) return 0;
-    return loanStatusUpdatePrincipal?.remainingPayments[0]?.remaining_balance || 0;
+    console.log("loanStatusUpdatePrincipal?.remainingPayments: ", loanStatusUpdatePrincipal?.remainingPayments);
+    return loanStatusUpdatePrincipal?.remainingPayments[0]?.remaining_balance.toFixed(2) || 0;
   };
+  console.log("getTotalRemainingAmount: ", getTotalRemainingAmount());
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -269,7 +285,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                       <EnhancedInputAmount
                         {...field}
                         value={
-                          field.value || getNextPaymentPrincipal().toFixed(2)
+                          field.value.toFixed(2) || getNextPaymentPrincipal().toFixed(2)
                         }
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           field.onChange(Number(e.target.value))
@@ -299,7 +315,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                       <InputAmount
                         type='number'
                         {...field}
-                        value={field.value || getNextPaymentInterest()}
+                        value={field.value.toFixed(2) || getNextPaymentInterest()}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                         disabled={!form.watch('different_payment')}
                       />
@@ -328,7 +344,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                       Saldo pendiente de pago
                     </div>
                     <div className='text-2xl font-semibold'>
-                      S/. {getTotalRemainingAmount().toFixed(2)}
+                      S/. {getTotalRemainingAmount()}
                     </div>
                   </CardContent>
                 </Card>

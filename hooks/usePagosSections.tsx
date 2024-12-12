@@ -19,6 +19,7 @@ const formSchema = z.object({
   loan: z.string().min(1, { message: 'Por favor seleccione un préstamo' }),
   capital_payment: z.number().min(0, { message: 'Ingrese un monto válido' }),
   interest_payment: z.number().min(0, { message: 'Ingrese un monto válido' }),
+  installment_number: z.number().default(1),
   different_payment: z.boolean().default(false),
 });
 
@@ -45,6 +46,7 @@ export const usePagos = (juntaId: string) => {
       loan: '',
       capital_payment: 0,
       interest_payment: 0,
+      installment_number: 1,
       different_payment: false,
     },
   });
@@ -85,7 +87,7 @@ const { data: loans = [], isLoading: isLoadingLoans } = useQuery<Prestamo[]>({
   refetchInterval: 30000, // Refetch every 30 seconds
 });
 
-const { data: paymentHistory = [], isLoading: isLoadingHistory } = useQuery<
+const { data: paymentHistory = [], isLoading: isLoadingHistory, refetch: refetchLoans } = useQuery<
   PaymentHistory[]
 >({
   queryKey: QUERY_KEYS.payments(juntaId),
@@ -122,6 +124,7 @@ const { data: paymentHistory = [], isLoading: isLoadingHistory } = useQuery<
         amount,
         principal_paid: values.capital_payment,
         interest_paid: values.interest_payment,
+        installment_number: values.installment_number,
         date: values.date,
         is_different_payment: values.different_payment,
       });
@@ -161,9 +164,13 @@ const { data: paymentHistory = [], isLoading: isLoadingHistory } = useQuery<
     mutationFn: (id: string) => api.delete(`prestamos/pagos/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payment-history', juntaId] });
-      queryClient.invalidateQueries({
-        queryKey: ['loan-status', selectedPrestamoId],
-      });
+      // queryClient.invalidateQueries({
+      //   queryKey: ['loan-status', selectedPrestamoId],
+      // });
+            queryClient.invalidateQueries({
+              queryKey: QUERY_KEYS.loanStatus(selectedPrestamoId),
+            });
+      refetchLoans();
       queryClient.invalidateQueries({ queryKey: ['junta', juntaId] });
       toast({
         title: 'Pago eliminado',
@@ -210,6 +217,7 @@ const { data: paymentHistory = [], isLoading: isLoadingHistory } = useQuery<
     form,
     members,
     loans: filteredLoans,
+    refetchLoans:refetchLoans,
     refetchLoanStatus,
     paymentHistory,
     loanStatusUpdatePrincipal,

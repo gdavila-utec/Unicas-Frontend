@@ -22,6 +22,7 @@ interface PrestamoDetailsProps {
 export default function PrestamoDetails({ id }: PrestamoDetailsProps) {
   const {
     prestamo,
+    loanStatus,
     juntaId, // Now available from the hook
     isLoading,
     error,
@@ -31,7 +32,9 @@ export default function PrestamoDetails({ id }: PrestamoDetailsProps) {
     formatDate,
     exportToPDF,
   } = usePrestamoDetails(id);
+  
   console.log("prestamo: ", prestamo);
+  console.log("loanStatus: ", loanStatus);
   
   useEffect(() => {
     if (juntaId) {
@@ -57,7 +60,6 @@ export default function PrestamoDetails({ id }: PrestamoDetailsProps) {
 
   return (
     <div className='container mx-auto p-4 space-y-6 bg-white rounded-md w-full bg-red-600'>
-
       <div className='flex items-center justify-between'>
         <div className='space-y-1'>
           <h1 className='text-2xl font-semibold tracking-tight'>

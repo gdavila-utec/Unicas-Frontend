@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -56,9 +56,8 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
   } = usePagos(juntaId);
   
   const [saldo, setSaldo] = useState<number>();
+  const [loanIdState, setLoanIdState] = useState<string>('');
   
-  console.log("loans: ", loans);
-  console.log("paymentHistory: ", paymentHistory);
     const getSelectedLoanType = () => {
       const selectedLoanId = form.watch('loan');
       const selectedLoan = loans.find((loan) => loan.id === selectedLoanId);
@@ -91,18 +90,14 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
     if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 'PENDING';
     return loanStatusUpdatePrincipal.remainingPayments[0]?.status || 'PENDING';
   }
-
   const paymentStatus = getPaymentStatus();
-  console.log("paymentStatus: ", paymentStatus);
 
   useEffect(() => {
+   
     if ((loanStatusUpdatePrincipal?.remainingPayments ?? []).length > 0) {
       form.setValue('capital_payment', nextPaymentPrincipal);
-      console.log('nextPaymentPrincipal: ', nextPaymentPrincipal);
       form.setValue('interest_payment', nextPaymentInterest);
-      console.log('nextPaymentInterest: ', nextPaymentInterest);
     }
-
     refetchLoanStatus();
   }, [
     loanStatusUpdatePrincipal,
@@ -113,12 +108,32 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
   ]);
 
 
-  console.log('-----------INSTALLMENT NUMBER-----------------', {
-    installment_number: loanStatusUpdatePrincipal?.remainingPayments[0]?.installment_number || 1,
-  });
 
+   const getTotalRemainingAmount = () => {
+     if (!loanStatusUpdatePrincipal?.remainingPayments) return 0;
+     return saldo;
+   };
   
+  const remainingPaymentsAmount = getTotalRemainingAmount();
 
+  useEffect(() => {
+    if (form.watch('loan') === loanIdState) {
+      console.log('loanIdState: ', loanIdState);
+      console.log("form.watch('loan') === loanId: ", form.watch('loan'));
+      setSaldo(remainingPaymentsAmount);
+    }
+    const selectedLoan = loans.find((loan) => loan.id === loanIdState);
+    console.log("selectedLoan: ", selectedLoan);
+    if (selectedLoan) {
+      setSaldo(selectedLoan.remaining_amount);
+    }
+  }, [
+    loanStatusUpdatePrincipal,
+    remainingPaymentsAmount,
+    loanIdState,
+    form,
+    loans,
+  ]);
 
   const getNextPaymentAmount = () => {
     if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 0;
@@ -126,30 +141,16 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
   };
 
   const getNextPaymentInstallmentNumber = () => {
-    console.log('getNextPaymentInstallmentNumber-----------------------------------LOOOOOOOK');
     if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 0;
     return loanStatusUpdatePrincipal.remainingPayments[0]?.installment_number || 1;
   }
 
   const installmentNumber = getNextPaymentInstallmentNumber();
-  console.log("installmentNumber typeof: ", typeof installmentNumber);
-  
-  
-  
-
   
   const getRemainingInstallments = () => {
     if (!loanStatusUpdatePrincipal?.remainingPayments) return 0;
     return loanStatusUpdatePrincipal.remainingPayments.length;
   };
-
-  const getTotalRemainingAmount = () => {
-    if (!loanStatusUpdatePrincipal?.remainingPayments) return 0;
-    console.log("loanStatusUpdatePrincipal?.remainingPayments: ", loanStatusUpdatePrincipal?.remainingPayments);
-    console.log("saldo: ", saldo);
-    return saldo
-  };
-  console.log("getTotalRemainingAmount: ", getTotalRemainingAmount());
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -161,20 +162,17 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
     form.setValue('loan', loanId);
     form.setValue('different_payment', false);
     if (loanId) {
-      const selectedLoan = loans.find((loan) => loan.id === loanId);
-      if (selectedLoan) {
-        setSaldo(selectedLoan?.remaining_amount);
-      }
-    }
+      setLoanIdState(loanId);
+
+    } 
     // const installmentNumber = getNextPaymentInstallmentNumber();
     console.log('update form installment number: ', installmentNumber);
     if (installmentNumber) {
-      console.log("installmentNumber if statement: ", installmentNumber);
       form.setValue('installment_number', installmentNumber);
     }
-    console.log('installmentNumber: ', form.watch('installment_number'));
     handleFormChange();
     refetchLoanStatus();
+
   };
 
 

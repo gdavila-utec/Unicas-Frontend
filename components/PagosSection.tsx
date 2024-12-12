@@ -125,7 +125,8 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
     const selectedLoan = loans.find((loan) => loan.id === loanIdState);
     console.log("selectedLoan: ", selectedLoan);
     if (selectedLoan) {
-      setSaldo(selectedLoan.remaining_amount);
+      const remaining_amount = parseFloat(selectedLoan.remaining_amount.toFixed(2));
+      setSaldo(remaining_amount);
     }
   }, [
     loanStatusUpdatePrincipal,

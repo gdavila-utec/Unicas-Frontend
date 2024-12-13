@@ -120,7 +120,7 @@ export default function PrestamoDetails({ id }: PrestamoDetailsProps) {
                 <div>
                   <h3 className='font-medium mb-1'>Fecha de pago</h3>
                   <p className='text-sm text-muted-foreground'>
-                    {formatDate(prestamo.paymentSchedule[0].due_date)}
+                    {formatDate(prestamo.paymentSchedule[0]?.due_date)}
                   </p>
                 </div>
               </div>
@@ -152,7 +152,7 @@ export default function PrestamoDetails({ id }: PrestamoDetailsProps) {
                     {formatDate(
                       prestamo.paymentSchedule[
                         prestamo.paymentSchedule.length - 1
-                      ].due_date
+                      ]?.due_date
                     )}
                   </p>
                 </div>
@@ -181,7 +181,7 @@ export default function PrestamoDetails({ id }: PrestamoDetailsProps) {
                 {prestamo.paymentSchedule.map((schedule) => (
                   <TableRow key={schedule.id}>
                     <TableCell>{schedule.installment_number}</TableCell>
-                    <TableCell>{formatDate(schedule.due_date)}</TableCell>
+                    <TableCell>{formatDate(schedule?.due_date)}</TableCell>
                     <TableCell>{formatMoney(schedule.interest)}</TableCell>
                     <TableCell>{formatMoney(schedule.principal)}</TableCell>
                     <TableCell>

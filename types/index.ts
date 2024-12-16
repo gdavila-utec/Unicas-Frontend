@@ -665,6 +665,7 @@
     updated_at: Date;
     prestamo: Prestamo;
     principal_paid: number;
+    installment_number: number;
     remaining_amount: number;
     remaining_interest: number;
     interest_paid: number;

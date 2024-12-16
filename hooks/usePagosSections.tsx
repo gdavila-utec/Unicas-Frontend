@@ -93,6 +93,7 @@ const { data: paymentHistory = [], isLoading: isLoadingHistory, refetch: refetch
   queryKey: QUERY_KEYS.payments(juntaId),
   queryFn: async () => {
     const response = await api.get(`junta-payments/${juntaId}/history`);
+    console.log("response: ", response);
     return response;
   },
   staleTime: 0,

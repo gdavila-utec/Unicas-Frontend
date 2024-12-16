@@ -36,6 +36,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { usePagos } from '@/hooks/usePagosSections';
 import EnhancedInputAmount from '@/components/ui/enhanced-input-amount';
 import { Prestamo } from '@/types';
+import { toast } from 'sonner';
 
 interface PagosSectionProps {
   juntaId: string;
@@ -55,8 +56,10 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
     onSubmit,
   } = usePagos(juntaId);
   
+
   const [saldo, setSaldo] = useState<number>();
   const [loanIdState, setLoanIdState] = useState<string>('');
+
   
     const getSelectedLoanType = () => {
       const selectedLoanId = form.watch('loan');
@@ -118,12 +121,9 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
 
   useEffect(() => {
     if (form.watch('loan') === loanIdState) {
-      console.log('loanIdState: ', loanIdState);
-      console.log("form.watch('loan') === loanId: ", form.watch('loan'));
       setSaldo(remainingPaymentsAmount);
     }
     const selectedLoan = loans.find((loan) => loan.id === loanIdState);
-    console.log("selectedLoan: ", selectedLoan);
     if (selectedLoan) {
       const remaining_amount = parseFloat(selectedLoan.remaining_amount.toFixed(2));
       setSaldo(remaining_amount);
@@ -152,6 +152,49 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
     if (!loanStatusUpdatePrincipal?.remainingPayments) return 0;
     return loanStatusUpdatePrincipal.remainingPayments.length;
   };
+  // const remainingInstallments = getRemainingInstallments();
+  
+  const handleDelete = (id: string) => {
+    
+    const pago = paymentHistory.find((payment) => payment.id === id);
+    const loanId = pago?.prestamo.id;
+    const numerodePagosPrestamo = paymentHistory.filter((payment) => payment.prestamo.id === loanId).length;
+    console.log("fuera numerodePagosPrestamo: ", numerodePagosPrestamo);
+     console.log("fuera pago?.installment_number: ", pago?.installment_number);
+
+     toast.info(
+       `Pago numero ${pago?.installment_number} del prestamo ${form.getValues(
+         'loan'
+        )}  prueba`
+      );
+      if (pago?.installment_number === numerodePagosPrestamo) {
+      handleDeletePago(id);
+      console.log(
+        'dentro pago?.installment_number: ',
+        pago?.installment_number
+      );
+      console.log('dentro numerodePagosPrestamo: ', numerodePagosPrestamo);
+      toast.info(
+        `Pago numero ${pago?.installment_number} del prestamo ${form.getValues(
+          'loan'
+        )}  eliminado correctamente`
+      );
+      confirm(
+        `Pago numero ${pago?.installment_number} del historial con ${numerodePagosPrestamo}  pagos}  se ha eliminado correctamente`
+      );
+    } else {
+      toast.info(
+        `Pago numero ${pago?.installment_number} del historial con ${numerodePagosPrestamo}  pagos}  NO se ha eliminado correctamente`
+      );
+      toast.error(
+        'No se puede eliminar el pago si hay pagos anteriores a este'
+      );
+      confirm(
+        `Pago numero ${pago?.installment_number} del historial con ${numerodePagosPrestamo}  pagos}  NO se ha eliminado correctamente`
+      );
+    }
+ 
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -166,8 +209,6 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
       setLoanIdState(loanId);
 
     } 
-    // const installmentNumber = getNextPaymentInstallmentNumber();
-    console.log('update form installment number: ', installmentNumber);
     if (installmentNumber) {
       form.setValue('installment_number', installmentNumber);
     }
@@ -332,12 +373,9 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                           field.value.toFixed(2) ||
                           getNextPaymentPrincipal().toFixed(2)
                         }
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        {
-                          
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           return field.onChange(Number(e.target.value));
-                         }
-                        }
+                        }}
                         disabled={
                           !isCuotaVariable && !form.watch('different_payment')
                         }
@@ -395,9 +433,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                     <div className='text-sm text-gray-500 mb-1'>
                       Saldo pendiente de pago
                     </div>
-                    <div className='text-2xl font-semibold'>
-                      S/. {saldo}
-                    </div>
+                    <div className='text-2xl font-semibold'>S/. {saldo}</div>
                   </CardContent>
                 </Card>
 
@@ -472,7 +508,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                       <Button
                         variant='destructive'
                         size='sm'
-                        onClick={() => handleDeletePago(payment.id)}
+                        onClick={() => handleDelete(payment.id)}
                         disabled={isLoading}
                       >
                         Eliminar

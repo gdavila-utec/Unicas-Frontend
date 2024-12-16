@@ -67,6 +67,9 @@ export default function SignInPage() {
         sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
         secure: process.env.NODE_ENV === 'production',
       });
+      console.log("data.user.juntas[0].id: ", data.user.juntas[0]?.id);
+      console.log("data.user.: ", data.user);
+      console.log("data.user.id: ", data.user.id);
 
       // Store auth data in state
       setAuth({
@@ -83,7 +86,7 @@ export default function SignInPage() {
       // Force a router refresh to update middleware state
       router.refresh();
 
-      const juntaId = data.user.juntas[0].id;
+      const juntaId = data.user.juntas[0]?.id;
       const NumeroDeJuntas = data.user.juntas.length;
       if (NumeroDeJuntas > 1) {
         router.push('/404');

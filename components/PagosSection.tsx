@@ -35,7 +35,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { usePagos } from '@/hooks/usePagosSections';
 import EnhancedInputAmount from '@/components/ui/enhanced-input-amount';
-import { Prestamo } from '@/types';
+import { Prestamo, Pago } from '@/types';
 import { toast } from 'sonner';
 
 interface PagosSectionProps {
@@ -158,41 +158,22 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
     
     const pago = paymentHistory.find((payment) => payment.id === id);
     const loanId = pago?.prestamo.id;
-    const numerodePagosPrestamo = paymentHistory.filter((payment) => payment.prestamo.id === loanId).length;
-    console.log("fuera numerodePagosPrestamo: ", numerodePagosPrestamo);
-     console.log("fuera pago?.installment_number: ", pago?.installment_number);
+    const pagosPrestamo = paymentHistory.filter((payment) => payment.prestamo.id === loanId)
+    const pagoSelected = pagosPrestamo.find((payment) => payment.id === id);
+    console.log("installment number de pagoSelected: ", pagoSelected?.installment_number);
+    const numerodePagosPrestamo = pagosPrestamo.length;
+    console.log("dentro numerodePagosPrestamo: ", numerodePagosPrestamo);
 
-     toast.info(
-       `Pago numero ${pago?.installment_number} del prestamo ${form.getValues(
-         'loan'
-        )}  prueba`
-      );
-      // handleDeletePago(id);
-      if (pago?.installment_number === numerodePagosPrestamo) {
-      console.log(
-        'dentro pago?.installment_number: ',
-        pago?.installment_number
-      );
-      console.log('dentro numerodePagosPrestamo: ', numerodePagosPrestamo);
-      toast.info(
-        `Pago numero ${pago?.installment_number} del prestamo ${form.getValues(
-          'loan'
-        )}  eliminado correctamente`
-      );
-      confirm(
-        `Pago numero ${pago?.installment_number} del historial con ${numerodePagosPrestamo}  pagos}  se ha eliminado correctamente`
-      );
-    } else {
-      toast.info(
-        `Pago numero ${pago?.installment_number} del historial con ${numerodePagosPrestamo}  pagos}  NO se ha eliminado correctamente`
-      );
-      toast.error(
-        'No se puede eliminar el pago si hay pagos anteriores a este'
-      );
-      confirm(
-        `Pago numero ${pago?.installment_number} del historial con ${numerodePagosPrestamo}  pagos}  NO se ha eliminado correctamente`
-      );
-    }
+      handleDeletePago(id);
+      if (pagoSelected?.installment_number === numerodePagosPrestamo) {
+        confirm(
+          `Pago numero ${pagoSelected?.installment_number} del historial con ${numerodePagosPrestamo}  pagos}  se ha eliminado correctamente`
+        );
+      } else {
+        confirm(
+          `Pago numero ${pagoSelected?.installment_number} del historial con ${numerodePagosPrestamo}  pagos}  NO se ha eliminado correctamente`
+        );
+      }
  
   }
 
@@ -491,8 +472,9 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                   </TableCell>
                 </TableRow>
               ) : (
-                paymentHistory.map((payment, index) => (
-                  <TableRow key={payment.id}>
+                paymentHistory.map((payment, index) => {
+                  console.log("payment: ", payment);
+                  return <TableRow key={payment.id}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>{payment.prestamo.member.full_name}</TableCell>
                     <TableCell>
@@ -517,7 +499,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))
+                })
               )}
               {paymentHistory.length > 0 && (
                 <TableRow className='bg-gray-100'>

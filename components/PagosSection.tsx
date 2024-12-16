@@ -167,8 +167,8 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
          'loan'
         )}  prueba`
       );
+      // handleDeletePago(id);
       if (pago?.installment_number === numerodePagosPrestamo) {
-      handleDeletePago(id);
       console.log(
         'dentro pago?.installment_number: ',
         pago?.installment_number
@@ -473,8 +473,9 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                 <TableHead>Pago de intereses</TableHead>
                 <TableHead>Pago de mora</TableHead>
                 <TableHead>Pago de cuota</TableHead>
-                <TableHead>Saldo pendiente de pago</TableHead>
-                <TableHead>Cuotas pendientes</TableHead>
+                <TableHead>Saldo</TableHead>
+                <TableHead>Prestamo</TableHead>
+                <TableHead>Cuotas</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -502,7 +503,8 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
                     <TableCell>0.00</TableCell>
                     <TableCell>{payment.amount.toFixed(2)}</TableCell>
                     <TableCell>{payment.remaining_amount.toFixed(2)}</TableCell>
-                    <TableCell>{payment.remaining_installments}</TableCell>
+                    <TableCell>{payment.prestamo.loan_type}</TableCell>
+                    <TableCell className='flex justify-center mt-1'>{payment.remaining_installments}</TableCell>
                     <TableCell>{payment.prestamo.status}</TableCell>
                     <TableCell>
                       <Button

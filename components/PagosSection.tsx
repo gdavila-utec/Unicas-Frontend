@@ -59,6 +59,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
 
   const [saldo, setSaldo] = useState<number>();
   const [loanIdState, setLoanIdState] = useState<string>('');
+  const [installmentNumberState, setInstallmentNumberState] = useState<number>(1);
 
   
     const getSelectedLoanType = () => {
@@ -119,21 +120,38 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
   
   const remainingPaymentsAmount = getTotalRemainingAmount();
 
+    const getNextPaymentInstallmentNumber = () => {
+      if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 0;
+      return (
+        loanStatusUpdatePrincipal.remainingPayments[0]?.installment_number || 1
+      );
+    };
+
+    const installmentNumber = getNextPaymentInstallmentNumber();
+
   useEffect(() => {
     if (form.watch('loan') === loanIdState) {
       setSaldo(remainingPaymentsAmount);
     }
     const selectedLoan = loans.find((loan) => loan.id === loanIdState);
     if (selectedLoan) {
-      const remaining_amount = parseFloat(selectedLoan.remaining_amount.toFixed(2));
+      const remaining_amount = parseFloat(
+        selectedLoan.remaining_amount.toFixed(2)
+      );
       setSaldo(remaining_amount);
+    }
+    if (installmentNumber) {
+      setInstallmentNumberState(installmentNumber);
+      form.setValue('installment_number', installmentNumberState);
     }
   }, [
     loanStatusUpdatePrincipal,
     remainingPaymentsAmount,
     loanIdState,
     form,
+    installmentNumberState,
     loans,
+    installmentNumber,
   ]);
 
   const getNextPaymentAmount = () => {
@@ -141,12 +159,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
     return loanStatusUpdatePrincipal.remainingPayments[0]?.expected_amount || 0;
   };
 
-  const getNextPaymentInstallmentNumber = () => {
-    if (!loanStatusUpdatePrincipal?.remainingPayments?.length) return 0;
-    return loanStatusUpdatePrincipal.remainingPayments[0]?.installment_number || 1;
-  }
 
-  const installmentNumber = getNextPaymentInstallmentNumber();
   
   const getRemainingInstallments = () => {
     if (!loanStatusUpdatePrincipal?.remainingPayments) return 0;
@@ -164,17 +177,24 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
     const numerodePagosPrestamo = pagosPrestamo.length;
     console.log("dentro numerodePagosPrestamo: ", numerodePagosPrestamo);
 
+    if (pagoSelected?.installment_number === numerodePagosPrestamo) {
+      const userConfirmed = confirm(
+        `Esta seguro que quiere eliminar el pago numero  ${pagoSelected?.installment_number} del prestamo ${pagoSelected.prestamo.loan_type} con un historial de ${numerodePagosPrestamo}  pagos?}`
+      );
+      if(userConfirmed) {   
       handleDeletePago(id);
-      if (pagoSelected?.installment_number === numerodePagosPrestamo) {
-        confirm(
-          `Pago numero ${pagoSelected?.installment_number} del historial con ${numerodePagosPrestamo}  pagos}  se ha eliminado correctamente`
-        );
       } else {
-        confirm(
+        alert(
+          `Pago numero ${pagoSelected?.installment_number} del historial con ${numerodePagosPrestamo}  pagos}  NO se ha eliminado`
+        );
+      } 
+ 
+    } else {
+       
+         alert(
           `Pago numero ${pagoSelected?.installment_number} del historial con ${numerodePagosPrestamo}  pagos}  NO se ha eliminado correctamente`
         );
       }
- 
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -191,7 +211,8 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
 
     } 
     if (installmentNumber) {
-      form.setValue('installment_number', installmentNumber);
+      setInstallmentNumberState(installmentNumber);
+      form.setValue('installment_number', installmentNumberState);
     }
     handleFormChange();
     refetchLoanStatus();

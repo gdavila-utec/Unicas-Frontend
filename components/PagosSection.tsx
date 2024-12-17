@@ -179,7 +179,7 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
 
 
       const userConfirmed = confirm(
-        `Esta seguro que quiere eliminar el pago numero  ${pagoSelected?.installment_number} del prestamo ${pagoSelected?.prestamo.loan_type} con un historial de ${numerodePagosPrestamo}  pagos?}`
+        `Esta seguro que quiere eliminar el pago numero  ${installmentNumberState} del prestamo ${pagoSelected?.prestamo.loan_type} con un historial de ${numerodePagosPrestamo}  pagos?}`
       );
       if(userConfirmed) {   
       handleDeletePago(id);

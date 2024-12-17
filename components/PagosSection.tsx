@@ -177,24 +177,13 @@ export default function PagosSection({ juntaId }: PagosSectionProps) {
     const numerodePagosPrestamo = pagosPrestamo.length;
     console.log("dentro numerodePagosPrestamo: ", numerodePagosPrestamo);
 
-    if (pagoSelected?.installment_number === numerodePagosPrestamo) {
+
       const userConfirmed = confirm(
-        `Esta seguro que quiere eliminar el pago numero  ${pagoSelected?.installment_number} del prestamo ${pagoSelected.prestamo.loan_type} con un historial de ${numerodePagosPrestamo}  pagos?}`
+        `Esta seguro que quiere eliminar el pago numero  ${pagoSelected?.installment_number} del prestamo ${pagoSelected?.prestamo.loan_type} con un historial de ${numerodePagosPrestamo}  pagos?}`
       );
       if(userConfirmed) {   
       handleDeletePago(id);
-      } else {
-        alert(
-          `Pago numero ${pagoSelected?.installment_number} del historial con ${numerodePagosPrestamo}  pagos}  NO se ha eliminado`
-        );
       } 
- 
-    } else {
-       
-         alert(
-          `Pago numero ${pagoSelected?.installment_number} del historial con ${numerodePagosPrestamo}  pagos}  NO se ha eliminado correctamente`
-        );
-      }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
